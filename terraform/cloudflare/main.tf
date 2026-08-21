@@ -54,7 +54,15 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "homelab" {
         service  = "http://traefik.kube-system.svc.cluster.local:80"
       },
       {
+        hostname = "calendar.${var.cloudflare_zone_name}"
+        service  = "http://traefik.kube-system.svc.cluster.local:80"
+      },
+      {
         hostname = "n8n.${var.cloudflare_prod_zone_name}"
+        service  = "http://traefik.kube-system.svc.cluster.local:80"
+      },
+      {
+        hostname = "openbao.${var.cloudflare_prod_zone_name}"
         service  = "http://traefik.kube-system.svc.cluster.local:80"
       },
       {
@@ -166,6 +174,15 @@ resource "cloudflare_zero_trust_access_application" "openbao" {
   ]
 }
 
+resource "cloudflare_dns_record" "openbao_prod" {
+  zone_id = var.cloudflare_prod_zone_id
+  name    = "openbao.${var.cloudflare_prod_zone_name}"
+  content = "${cloudflare_zero_trust_tunnel_cloudflared.homelab.id}.cfargotunnel.com"
+  type    = "CNAME"
+  ttl     = 1
+  proxied = true
+}
+
 resource "cloudflare_dns_record" "n8n" {
   zone_id = var.cloudflare_zone_id
   name    = "n8n.${var.cloudflare_zone_name}"
@@ -198,6 +215,15 @@ resource "cloudflare_zero_trust_access_application" "n8n" {
       ]
     }
   ]
+}
+
+resource "cloudflare_dns_record" "calendar" {
+  zone_id = var.cloudflare_zone_id
+  name    = "calendar.${var.cloudflare_zone_name}"
+  content = "${cloudflare_zero_trust_tunnel_cloudflared.homelab.id}.cfargotunnel.com"
+  type    = "CNAME"
+  ttl     = 1
+  proxied = true
 }
 
 resource "cloudflare_dns_record" "n8n_prod" {

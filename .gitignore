@@ -20,3 +20,7 @@ kubeconfig
 # Local tool downloads
 tools/downloads/
 tools/bin/
+
+# Python generated files
+__pycache__/
+*.py[cod]

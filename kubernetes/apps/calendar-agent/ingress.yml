@@ -1,0 +1,18 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: calendar-agent-api
+  namespace: calendar-agent
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: calendar.miak-it.dev
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: calendar-agent-api-external
+                port:
+                  number: 80

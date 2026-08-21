@@ -8,14 +8,8 @@ pod="openbao-0"
 policy_name="iac-cloudflare"
 username="iac"
 
-printf "OpenBao root/admin token for k3s target: "
-IFS= read -r -s bao_token
-printf "\n"
-
-if [[ -z "${bao_token}" ]]; then
-  echo "No OpenBao token entered; aborting." >&2
-  exit 1
-fi
+source "${repo_root}/scripts/lib/openbao-login.sh"
+openbao_login_admin
 
 printf "Cloudflare API token for IaC: "
 IFS= read -r -s cloudflare_api_token
@@ -36,10 +30,10 @@ if [[ -z "${iac_password}" ]]; then
 fi
 
 kubectl --kubeconfig "${kubeconfig}" -n "${namespace}" exec "${pod}" -- \
-  env "BAO_TOKEN=${bao_token}" bao auth enable userpass >/dev/null 2>&1 || true
+  env "BAO_TOKEN=${BAO_TOKEN}" bao auth enable userpass >/dev/null 2>&1 || true
 
 kubectl --kubeconfig "${kubeconfig}" -n "${namespace}" exec -i "${pod}" -- \
-  env "BAO_TOKEN=${bao_token}" "POLICY_NAME=${policy_name}" \
+  env "BAO_TOKEN=${BAO_TOKEN}" "POLICY_NAME=${policy_name}" \
   sh -lc 'bao policy write "${POLICY_NAME}" -' <<'POLICY'
 path "apps/data/iac/cloudflare" {
   capabilities = ["read"]
@@ -55,11 +49,11 @@ path "apps/metadata/iac/cloudflare" {
 POLICY
 
 kubectl --kubeconfig "${kubeconfig}" -n "${namespace}" exec "${pod}" -- \
-  env "BAO_TOKEN=${bao_token}" "CLOUDFLARE_API_TOKEN=${cloudflare_api_token}" \
+  env "BAO_TOKEN=${BAO_TOKEN}" "CLOUDFLARE_API_TOKEN=${cloudflare_api_token}" \
   sh -lc 'bao kv put apps/iac/cloudflare CLOUDFLARE_API_TOKEN="${CLOUDFLARE_API_TOKEN}" >/dev/null'
 
 kubectl --kubeconfig "${kubeconfig}" -n "${namespace}" exec "${pod}" -- \
-  env "BAO_TOKEN=${bao_token}" "IAC_PASSWORD=${iac_password}" "POLICY_NAME=${policy_name}" \
+  env "BAO_TOKEN=${BAO_TOKEN}" "IAC_PASSWORD=${iac_password}" "POLICY_NAME=${policy_name}" \
   sh -lc 'bao write auth/userpass/users/iac password="${IAC_PASSWORD}" policies="${POLICY_NAME}" >/dev/null'
 
 unset cloudflare_api_token

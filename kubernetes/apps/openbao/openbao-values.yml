@@ -74,6 +74,13 @@ server:
           sha256sum   = "641ae1858c0f660b4c3761286d627e1dcfd33dc35e7c83eb81ca9050b5bdc6d8"
         }
 
+        plugin "secret" "azure" {
+          image       = "ghcr.io/openbao/openbao-plugin-secrets-azure"
+          version     = "v0.23.0"
+          binary_name = "openbao-plugin-secrets-azure"
+          sha256sum   = "cd4e2e7b7f1f03e72d67594e27439255b46748948735ec3270ecc308068f2caa"
+        }
+
         listener "tcp" {
           tls_disable = 1
           address = "[::]:8200"
@@ -100,6 +107,9 @@ server:
     activeService: true
     hosts:
       - host: openbao.miak-it.dev
+        paths:
+          - /
+      - host: openbao.miak-it.com
         paths:
           - /
 

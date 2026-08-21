@@ -23,7 +23,7 @@ kubectl apply -f kubernetes/platform/external-secrets/namespace.yml
 
 ## Configure OpenBao Kubernetes Auth
 
-The script asks for the OpenBao root/admin token silently.
+The script asks for an OpenBao admin username and password, defaulting to `admin`.
 
 ```bash
 kubectl apply -f kubernetes/platform/external-secrets/openbao-rbac.yml

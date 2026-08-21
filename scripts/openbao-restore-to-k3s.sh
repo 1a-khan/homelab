@@ -7,6 +7,7 @@ namespace="openbao"
 pod="openbao-0"
 backup_dir="${repo_root}/backups/openbao"
 timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
+source "${repo_root}/scripts/lib/openbao-login.sh"
 
 snapshot="${1:-}"
 if [[ -z "${snapshot}" ]]; then
@@ -58,16 +59,16 @@ case "${init_status}" in
     ;;
 esac
 
-root_token=""
+restore_token=""
 if [[ -n "${init_file:-}" ]]; then
-  root_token="$(jq -r ".root_token // .initial_root_token" "${init_file}")"
+  restore_token="$(jq -r ".root_token // .initial_root_token" "${init_file}")"
 else
-  echo "Target was already initialized. Enter a target OpenBao root/admin token for restore:"
-  IFS= read -r -s root_token
-  echo
+  echo "Target is already initialized. Log in with an admin user that can restore raft snapshots."
+  openbao_login_admin
+  restore_token="${BAO_TOKEN}"
 fi
 
-if [[ -z "${root_token}" || "${root_token}" == "null" ]]; then
+if [[ -z "${restore_token}" || "${restore_token}" == "null" ]]; then
   echo "No target token available; aborting." >&2
   exit 1
 fi
@@ -77,7 +78,7 @@ kubectl --kubeconfig "${kubeconfig}" -n "${namespace}" cp "${snapshot}" "${pod}:
 
 echo "Restoring snapshot into k3s OpenBao."
 kubectl --kubeconfig "${kubeconfig}" -n "${namespace}" exec "${pod}" -- \
-  env "BAO_TOKEN=${root_token}" bao operator raft snapshot restore -force "/tmp/${base_snapshot}"
+  env "BAO_TOKEN=${restore_token}" bao operator raft snapshot restore -force "/tmp/${base_snapshot}"
 
 kubectl --kubeconfig "${kubeconfig}" -n "${namespace}" exec "${pod}" -- rm -f "/tmp/${base_snapshot}" || true
 

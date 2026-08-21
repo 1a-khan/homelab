@@ -193,7 +193,7 @@ docker logs --tail 100 <openbao-container>
 
 ## 16. OpenBao Snapshot And Restore
 
-Create a Raft snapshot from the current VPS OpenBao. Do not paste the token into chat; the script asks silently.
+Create a Raft snapshot from the current VPS OpenBao. The script asks for an OpenBao admin username and password, defaulting to `admin`.
 
 ```bash
 cd /home/dev/Desktop/local-svr/homelab
@@ -214,7 +214,7 @@ scripts/openbao-unseal-k3s.sh
 
 ## 17. OpenBao User Tests
 
-Check restored userpass users. Do not paste the root token into chat; the script asks silently.
+Check restored userpass users. The script asks for an OpenBao admin username and password, defaulting to `admin`.
 
 ```bash
 cd /home/dev/Desktop/local-svr/homelab
@@ -227,6 +227,71 @@ Test user login. The script asks for the password silently, checks the issued to
 scripts/openbao-test-user-login-k3s.sh admin
 scripts/openbao-test-user-login-k3s.sh terraform
 scripts/openbao-test-user-login-k3s.sh laptop
+```
+
+## OpenBao Daily Admin
+
+Production UI:
+
+```text
+https://openbao.miak-it.com/ui/
+```
+
+Check status from inside k3s:
+
+```bash
+kubectl exec -n openbao openbao-0 -- bao status
+```
+
+Use the CLI through the public production hostname:
+
+```bash
+export BAO_ADDR="https://openbao.miak-it.com"
+bao login
+bao status
+```
+
+Use the CLI through Kubernetes exec. This avoids Cloudflare/browser/session issues. Prefer logging in as `admin`; use a root token only for break-glass recovery.
+
+```bash
+kubectl exec -n openbao -it openbao-0 -- sh
+bao login -method=userpass username=admin
+bao status
+```
+
+Create or update a userpass user:
+
+```bash
+bao write auth/userpass/users/USERNAME password='NEW_PASSWORD' policies='POLICY_NAME'
+```
+
+Create a simple read-only policy for one app path:
+
+```bash
+bao policy write app-readonly - <<'POLICY'
+path "apps/data/my-app/*" {
+  capabilities = ["read"]
+}
+
+path "apps/metadata/my-app/*" {
+  capabilities = ["read", "list"]
+}
+POLICY
+```
+
+Store a normal key/value secret:
+
+```bash
+bao kv put apps/my-app/config username="my-user" password="my-password"
+bao kv get apps/my-app/config
+```
+
+Store an SSH private/public keypair as a secret:
+
+```bash
+bao kv put apps/my-app/ssh \
+  private_key=@/home/dev/.ssh/my_key \
+  public_key=@/home/dev/.ssh/my_key.pub
 ```
 
 ## 18. External Secrets With OpenBao
@@ -278,7 +343,7 @@ https://n8n.miak-it.dev
 
 Cloudflare should already have a proxied tunnel record and Access app for this hostname.
 
-Start by copying the current VPS n8n secrets into OpenBao. The script asks for the k3s OpenBao admin/root token silently, so do not paste the token into chat.
+Start by copying the current VPS n8n secrets into OpenBao. The script asks for an OpenBao admin username and password, defaulting to `admin`.
 
 ```bash
 cd /home/dev/Desktop/local-svr/homelab
@@ -378,4 +443,122 @@ For n8n production cutover, the expected DNS change is:
 n8n.miak-it.com
 from A 116.203.131.147
 to   CNAME <tunnel-id>.cfargotunnel.com
+```
+
+## 21. OpenBao Azure Secrets Engine
+
+OpenBao is configured to auto-download and register the Azure secrets plugin from the Helm values. The OpenBao StatefulSet uses the `OnDelete` update strategy, so `kubectl rollout restart` is not enough. After changing plugin config, delete the pod, let Kubernetes recreate it, then unseal it.
+
+```bash
+cd /home/dev/Desktop/local-svr/homelab
+export KUBECONFIG="$PWD/kubeconfig"
+
+kubectl delete pod -n openbao openbao-0
+kubectl wait --for=condition=Ready pod/openbao-0 -n openbao --timeout=180s || true
+kubectl exec -n openbao openbao-0 -- bao status || true
+
+scripts/openbao-unseal-k3s.sh
+```
+
+Configure the Azure secrets engine. The script asks for your OpenBao `admin` login and your Azure bootstrap app details. Do not paste those secrets into chat.
+
+```bash
+scripts/openbao-configure-azure-secrets-engine.sh
+```
+
+Inputs you need from Azure:
+
+```text
+Azure subscription ID
+Azure tenant ID
+Azure bootstrap app client ID
+Azure bootstrap app client secret
+Optional existing Terraform app registration Object ID
+```
+
+For Azure, prefer using an existing Terraform app registration Object ID. OpenBao then creates temporary passwords for that existing app instead of creating a brand-new app/service principal for every lease. This avoids common Microsoft Entra ID propagation delays.
+
+Create the Terraform app once in Azure:
+
+```text
+Microsoft Entra ID -> App registrations -> New registration
+Name: MIAK-Terraform
+Supported account types: Single tenant
+```
+
+Then assign that app `Contributor` on the target subscription:
+
+```text
+Subscriptions -> target subscription -> Access control (IAM) -> Add role assignment
+Role: Contributor
+Member type: User, group, or service principal
+Member: MIAK-Terraform
+```
+
+Use the app registration `Object ID` when the script asks:
+
+```text
+Existing Terraform app registration Object ID
+```
+
+Defaults are okay after that:
+
+```text
+Generated Terraform role: Contributor
+Generated credential scope: /subscriptions/<subscription-id>
+TTL: 1h
+Max TTL: 4h
+```
+
+Run OpenTofu/Terraform with dynamic Azure credentials from OpenBao:
+
+```bash
+scripts/terraform-with-openbao-azure.sh tofu -chdir=terraform/azure plan
+scripts/terraform-with-openbao-azure.sh tofu -chdir=terraform/azure apply
+```
+
+Quick safe test without printing the Azure client secret:
+
+```bash
+scripts/terraform-with-openbao-azure.sh sh -lc 'echo "$ARM_SUBSCRIPTION_ID"; echo "$ARM_TENANT_ID"; test -n "$ARM_CLIENT_ID"; test -n "$ARM_CLIENT_SECRET"; echo "azure env ok"'
+```
+
+## 22. Microsoft Graph App Credentials
+
+Configure OpenBao roles for existing Entra app registrations created by `/home/dev/Desktop/miak-management-azure`:
+
+```bash
+cd /home/dev/Desktop/miak-management-azure
+scripts/export-public-outputs.sh
+scripts/openbao-configure-graph-app-roles.sh
+```
+
+Apply the Kubernetes dynamic credential sync resources:
+
+```bash
+cd /home/dev/Desktop/local-svr/homelab
+export KUBECONFIG="$PWD/kubeconfig"
+
+kubectl apply -f kubernetes/platform/graph-credentials/graph-credential-generators.yml
+kubectl apply -f kubernetes/platform/graph-credentials/cluster-external-secrets.yml
+```
+
+Opt a namespace into MailMover credentials:
+
+```bash
+kubectl label namespace MY_NAMESPACE miak-it.com/graph-mail-mover=true --overwrite
+```
+
+Opt a namespace into OneDrive credentials:
+
+```bash
+kubectl label namespace MY_NAMESPACE miak-it.com/graph-onedrive-manager=true --overwrite
+```
+
+Reloader is installed. Annotate workloads so they restart when the synced credential changes:
+
+```yaml
+metadata:
+  annotations:
+    secret.reloader.stakater.com/reload: "graph-mail-mover"
 ```

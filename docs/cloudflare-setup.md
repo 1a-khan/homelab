@@ -87,7 +87,7 @@ scripts/iac-bootstrap-cloudflare-openbao.sh
 The script asks silently for:
 
 ```text
-OpenBao root/admin token
+OpenBao admin username and password
 Cloudflare API token
 New password for OpenBao user iac
 ```

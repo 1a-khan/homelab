@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: graph-app-demo
+  labels:
+    miak-it.com/graph-mail-mover: "true"
+    miak-it.com/graph-onedrive-manager: "true"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: external-secrets
+  namespace: graph-app-demo

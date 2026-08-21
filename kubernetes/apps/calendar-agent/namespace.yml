@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: calendar-agent
+  labels:
+    miak-it.com/graph-calendar-agent: "true"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: external-secrets
+  namespace: calendar-agent

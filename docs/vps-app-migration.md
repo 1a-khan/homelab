@@ -17,13 +17,27 @@ grafana/monitoring    VPS monitoring stack, likely replaced by local monitoring
 
 ## Migration Order
 
-1. OpenBao: done on `openbao.miak-it.dev`; production hostname switch still pending.
-2. n8n: migrate next because it is a key development tool and has small data.
+1. OpenBao: migrated to k3s and cut over to `openbao.miak-it.com`.
+2. n8n: migrated to k3s and cut over to `n8n.miak-it.com`.
 3. Windmill: migrate after n8n, preserving `BASE_URL` and database.
 4. Custom apps: `kids-prep`, `hermes`, and unknown app `uoow44...`.
 5. Decommission duplicated VPS monitoring after local dashboards cover what we need.
 
 ## n8n Migration
+
+Status: production cutover completed on 2026-08-18.
+
+Production hostname:
+
+```text
+https://n8n.miak-it.com
+```
+
+Current target:
+
+```text
+Cloudflare proxied CNAME -> 50327130-69c0-4ff9-a8c2-d44d516dd17d.cfargotunnel.com -> k3s Traefik -> n8n namespace
+```
 
 Preserve:
 

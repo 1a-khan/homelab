@@ -11,6 +11,20 @@ The safe order is:
 5. Verify secrets, auth methods, policies, mounts, audit, and UI login.
 6. Switch `openbao.miak-it.com` only after the restored instance is proven.
 
+Status: production cutover completed on 2026-08-21.
+
+Production hostname:
+
+```text
+https://openbao.miak-it.com
+```
+
+Current target:
+
+```text
+Cloudflare proxied CNAME -> 50327130-69c0-4ff9-a8c2-d44d516dd17d.cfargotunnel.com -> k3s Traefik -> openbao namespace
+```
+
 ## Target Deployment
 
 The on-prem target uses the official OpenBao Helm chart:

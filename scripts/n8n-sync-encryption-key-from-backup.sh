@@ -23,17 +23,13 @@ if [[ -z "${encryption_key}" || "${encryption_key}" == "null" ]]; then
   exit 1
 fi
 
-printf "OpenBao root/admin token for k3s target: "
-IFS= read -r -s bao_token
-printf "\n"
-
-if [[ -z "${bao_token}" ]]; then
-  echo "No token entered; aborting." >&2
-  exit 1
-fi
+namespace="openbao"
+pod="openbao-0"
+source "${repo_root}/scripts/lib/openbao-login.sh"
+openbao_login_admin
 
 kubectl --kubeconfig "${kubeconfig}" -n openbao exec openbao-0 -- \
-  env "BAO_TOKEN=${bao_token}" \
+  env "BAO_TOKEN=${BAO_TOKEN}" \
   bao kv patch apps/n8n "N8N_ENCRYPTION_KEY=${encryption_key}" >/dev/null
 
 unset encryption_key

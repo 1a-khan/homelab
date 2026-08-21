@@ -1,0 +1,22 @@
+# Local secrets and generated files
+.env
+backups/
+*.tfplan
+tfplan*
+*.tfvars
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Ansible local/runtime files
+ansible/inventory.ini
+ansible/group_vars/all.yml
+ansible/*.retry
+
+# kubeconfig copied from the server
+kubeconfig
+
+# Local tool downloads
+tools/downloads/
+tools/bin/

@@ -1,0 +1,107 @@
+---
+- name: Bootstrap Ubuntu host for production-style k3s
+  hosts: k3s_servers
+  become: true
+  vars_files:
+    - ../group_vars/all.yml
+
+  tasks:
+    - name: Set hostname
+      ansible.builtin.hostname:
+        name: "{{ server_hostname }}"
+
+    - name: Set timezone
+      community.general.timezone:
+        name: "{{ server_timezone }}"
+
+    - name: Install baseline packages
+      ansible.builtin.apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - fail2ban
+          - git
+          - gnupg
+          - htop
+          - jq
+          - net-tools
+          - unattended-upgrades
+          - ufw
+          - vim
+        state: present
+        update_cache: true
+
+    - name: Ensure admin user exists
+      ansible.builtin.user:
+        name: "{{ admin_user }}"
+        groups: sudo
+        append: true
+        shell: /bin/bash
+        create_home: true
+
+    - name: Install admin SSH key
+      ansible.posix.authorized_key:
+        user: "{{ admin_user }}"
+        key: "{{ admin_ssh_public_key }}"
+        state: present
+
+    - name: Allow passwordless sudo for admin user
+      ansible.builtin.copy:
+        dest: "/etc/sudoers.d/90-{{ admin_user }}"
+        owner: root
+        group: root
+        mode: "0440"
+        content: "{{ admin_user }} ALL=(ALL) NOPASSWD:ALL\n"
+        validate: "visudo -cf %s"
+
+    - name: Harden SSH daemon
+      ansible.builtin.copy:
+        dest: /etc/ssh/sshd_config.d/99-homelab-hardening.conf
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          PermitRootLogin no
+          PasswordAuthentication no
+          PubkeyAuthentication yes
+          KbdInteractiveAuthentication no
+          X11Forwarding no
+
+    - name: Validate SSH daemon configuration
+      ansible.builtin.command: sshd -t
+      changed_when: false
+
+    - name: Restart SSH daemon
+      ansible.builtin.service:
+        name: ssh
+        state: restarted
+
+    - name: Configure UFW defaults
+      community.general.ufw:
+        direction: "{{ item.direction }}"
+        policy: "{{ item.policy }}"
+      loop:
+        - { direction: incoming, policy: deny }
+        - { direction: outgoing, policy: allow }
+
+    - name: Allow SSH from LAN
+      community.general.ufw:
+        rule: allow
+        port: "22"
+        proto: tcp
+
+    - name: Enable UFW
+      community.general.ufw:
+        state: enabled
+
+    - name: Enable unattended upgrades
+      ansible.builtin.copy:
+        dest: /etc/apt/apt.conf.d/20auto-upgrades
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          APT::Periodic::Update-Package-Lists "1";
+          APT::Periodic::Unattended-Upgrade "1";
+

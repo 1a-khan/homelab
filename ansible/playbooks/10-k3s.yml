@@ -1,0 +1,78 @@
+---
+- name: Install single-node k3s
+  hosts: k3s_servers
+  become: true
+  vars_files:
+    - ../group_vars/all.yml
+
+  tasks:
+    - name: Load required kernel modules
+      community.general.modprobe:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - br_netfilter
+        - overlay
+
+    - name: Persist Kubernetes kernel modules
+      ansible.builtin.copy:
+        dest: /etc/modules-load.d/k8s.conf
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          br_netfilter
+          overlay
+
+    - name: Configure Kubernetes sysctl values
+      ansible.posix.sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        state: present
+        reload: true
+      loop:
+        - { name: net.bridge.bridge-nf-call-iptables, value: "1" }
+        - { name: net.bridge.bridge-nf-call-ip6tables, value: "1" }
+        - { name: net.ipv4.ip_forward, value: "1" }
+
+    - name: Remove old broad Kubernetes API firewall rule
+      community.general.ufw:
+        rule: allow
+        port: "6443"
+        proto: tcp
+        from_ip: "192.168.0.0/16"
+        delete: true
+      when: (k3s_api_allowed_cidr | default('192.168.8.0/24')) != "192.168.0.0/16"
+
+    - name: Allow Kubernetes API from trusted LAN
+      community.general.ufw:
+        rule: allow
+        port: "6443"
+        proto: tcp
+        from_ip: "{{ k3s_api_allowed_cidr | default('192.168.8.0/24') }}"
+
+    - name: Install k3s
+      ansible.builtin.shell: |
+        curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="{{ k3s_version }}" K3S_TOKEN="{{ k3s_token }}" sh -s - server \
+          --write-kubeconfig-mode 0644
+      args:
+        creates: /usr/local/bin/k3s
+
+    - name: Wait for node to become ready
+      ansible.builtin.command: kubectl wait --for=condition=Ready node --all --timeout=300s
+      register: k3s_nodes
+      changed_when: false
+
+    - name: Fetch kubeconfig to laptop
+      ansible.builtin.fetch:
+        src: /etc/rancher/k3s/k3s.yaml
+        dest: "{{ playbook_dir }}/../../kubeconfig"
+        flat: true
+
+    - name: Point local kubeconfig at the mini PC
+      ansible.builtin.replace:
+        path: "{{ playbook_dir }}/../../kubeconfig"
+        regexp: "https://127\\.0\\.0\\.1:6443"
+        replace: "https://{{ ansible_host }}:6443"
+      delegate_to: localhost
+      become: false

@@ -1,0 +1,7 @@
+cloudflare_account_id = "REPLACE_ME"
+cloudflare_zone_id    = "REPLACE_ME"
+cloudflare_zone_name  = "miak-it.dev"
+cloudflare_prod_zone_id   = "REPLACE_ME"
+cloudflare_prod_zone_name = "miak-it.com"
+hello_hostname        = "hello"
+access_allowed_email  = "ammadkhan@msn.com"

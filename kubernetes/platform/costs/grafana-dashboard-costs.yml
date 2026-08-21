@@ -1,0 +1,144 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-homelab-costs
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  homelab-costs.json: |-
+    {
+      "uid": "homelab-costs",
+      "title": "Homelab Costs",
+      "timezone": "browser",
+      "schemaVersion": 41,
+      "version": 1,
+      "refresh": "1h",
+      "tags": ["homelab", "costs"],
+      "panels": [
+        {
+          "type": "stat",
+          "title": "Mini PC Electricity / Month",
+          "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "prometheus"},
+              "expr": "homelab_power_watts{device=\"mini_pc\"} / 1000 * 24 * 30.4375 * scalar(homelab_electricity_price_eur_per_kwh)",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {"defaults": {"unit": "currencyEUR", "decimals": 2}, "overrides": []},
+          "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto"}
+        },
+        {
+          "type": "stat",
+          "title": "Mini PC Electricity / Year",
+          "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4},
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "prometheus"},
+              "expr": "homelab_power_watts{device=\"mini_pc\"} / 1000 * 24 * 365 * scalar(homelab_electricity_price_eur_per_kwh)",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {"defaults": {"unit": "currencyEUR", "decimals": 2}, "overrides": []},
+          "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto"}
+        },
+        {
+          "type": "stat",
+          "title": "Hardware Amortization / Month",
+          "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4},
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "prometheus"},
+              "expr": "homelab_hardware_purchase_cost_eur{device=\"mini_pc\"} / scalar(homelab_hardware_amortization_months{device=\"mini_pc\"})",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {"defaults": {"unit": "currencyEUR", "decimals": 2}, "overrides": []},
+          "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto"}
+        },
+        {
+          "type": "stat",
+          "title": "Hetzner VPS / Month",
+          "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4},
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "prometheus"},
+              "expr": "homelab_vps_cost_eur_per_month{provider=\"hetzner\"}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {"defaults": {"unit": "currencyEUR", "decimals": 2}, "overrides": []},
+          "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto"}
+        },
+        {
+          "type": "stat",
+          "title": "Estimated Homelab / Month",
+          "gridPos": {"x": 0, "y": 4, "w": 8, "h": 5},
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "prometheus"},
+              "expr": "scalar(homelab_power_watts{device=\"mini_pc\"}) / 1000 * 24 * 30.4375 * scalar(homelab_electricity_price_eur_per_kwh) + scalar(homelab_hardware_purchase_cost_eur{device=\"mini_pc\"}) / scalar(homelab_hardware_amortization_months{device=\"mini_pc\"}) + sum(homelab_domain_cost_eur_per_year) / 12 + sum(homelab_backup_cost_eur_per_month)",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {"defaults": {"unit": "currencyEUR", "decimals": 2}, "overrides": []},
+          "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto"}
+        },
+        {
+          "type": "stat",
+          "title": "Estimated Homelab / Year",
+          "gridPos": {"x": 8, "y": 4, "w": 8, "h": 5},
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "prometheus"},
+              "expr": "(scalar(homelab_power_watts{device=\"mini_pc\"}) / 1000 * 24 * 30.4375 * scalar(homelab_electricity_price_eur_per_kwh) + scalar(homelab_hardware_purchase_cost_eur{device=\"mini_pc\"}) / scalar(homelab_hardware_amortization_months{device=\"mini_pc\"}) + sum(homelab_domain_cost_eur_per_year) / 12 + sum(homelab_backup_cost_eur_per_month)) * 12",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {"defaults": {"unit": "currencyEUR", "decimals": 2}, "overrides": []},
+          "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto"}
+        },
+        {
+          "type": "stat",
+          "title": "Total Infra / Month",
+          "gridPos": {"x": 16, "y": 4, "w": 8, "h": 5},
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "prometheus"},
+              "expr": "scalar(homelab_power_watts{device=\"mini_pc\"}) / 1000 * 24 * 30.4375 * scalar(homelab_electricity_price_eur_per_kwh) + scalar(homelab_hardware_purchase_cost_eur{device=\"mini_pc\"}) / scalar(homelab_hardware_amortization_months{device=\"mini_pc\"}) + sum(homelab_domain_cost_eur_per_year) / 12 + sum(homelab_backup_cost_eur_per_month) + sum(homelab_vps_cost_eur_per_month)",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {"defaults": {"unit": "currencyEUR", "decimals": 2}, "overrides": []},
+          "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto"}
+        },
+        {
+          "type": "stat",
+          "title": "Total Infra / Year",
+          "gridPos": {"x": 0, "y": 9, "w": 8, "h": 5},
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "prometheus"},
+              "expr": "(scalar(homelab_power_watts{device=\"mini_pc\"}) / 1000 * 24 * 30.4375 * scalar(homelab_electricity_price_eur_per_kwh) + scalar(homelab_hardware_purchase_cost_eur{device=\"mini_pc\"}) / scalar(homelab_hardware_amortization_months{device=\"mini_pc\"}) + sum(homelab_domain_cost_eur_per_year) / 12 + sum(homelab_backup_cost_eur_per_month) + sum(homelab_vps_cost_eur_per_month)) * 12",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {"defaults": {"unit": "currencyEUR", "decimals": 2}, "overrides": []},
+          "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto"}
+        },
+        {
+          "type": "timeseries",
+          "title": "Cost Inputs",
+          "gridPos": {"x": 8, "y": 9, "w": 16, "h": 8},
+          "targets": [
+            {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "homelab_power_watts", "legendFormat": "watts", "refId": "A"},
+            {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "homelab_electricity_price_eur_per_kwh", "legendFormat": "electricity EUR/kWh", "refId": "B"},
+            {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "homelab_vps_cost_eur_per_month", "legendFormat": "VPS EUR/month", "refId": "C"}
+          ],
+          "fieldConfig": {"defaults": {"decimals": 2}, "overrides": []},
+          "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "none"}}
+        }
+      ]
+    }

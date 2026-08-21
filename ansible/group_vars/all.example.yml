@@ -1,0 +1,16 @@
+---
+server_hostname: mini-k3s-prod
+server_timezone: Europe/Berlin
+
+# Set this to the local user that should administer the server.
+admin_user: YOUR_USER
+
+# Paste your laptop public SSH key here after running:
+# cat ~/.ssh/id_ed25519.pub
+admin_ssh_public_key: "ssh-ed25519 REPLACE_ME"
+
+k3s_version: "v1.36.3+k3s1"
+k3s_token: "replace-this-with-a-long-random-token"
+
+# Restrict kubectl access to your trusted LAN. Adjust to your router subnet.
+k3s_api_allowed_cidr: "192.168.8.0/24"

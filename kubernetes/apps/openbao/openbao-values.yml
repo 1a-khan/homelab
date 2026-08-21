@@ -1,0 +1,123 @@
+global:
+  tlsDisable: true
+
+injector:
+  enabled: true
+  replicas: 1
+  metrics:
+    enabled: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+server:
+  image:
+    registry: quay.io
+    repository: openbao/openbao
+    tag: "2.6.1"
+    pullPolicy: IfNotPresent
+
+  logLevel: info
+  logFormat: json
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+  dataStorage:
+    enabled: true
+    size: 20Gi
+    storageClass: local-path
+    accessMode: ReadWriteOnce
+    mountPath: /openbao/data
+
+  auditStorage:
+    enabled: true
+    size: 5Gi
+    storageClass: local-path
+    accessMode: ReadWriteOnce
+    mountPath: /openbao/audit
+
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+
+  standalone:
+    enabled: false
+
+  ha:
+    enabled: true
+    replicas: 1
+    raft:
+      enabled: true
+      setNodeId: true
+      config: |
+        ui = true
+        log_level = "info"
+        plugin_directory = "/openbao/data/plugins"
+        plugin_auto_download = true
+        plugin_auto_register = true
+        plugin_download_behavior = "fail"
+
+        plugin "secret" "aws" {
+          image       = "ghcr.io/openbao/openbao-plugin-secrets-aws"
+          version     = "v0.3.1"
+          binary_name = "openbao-plugin-secrets-aws"
+          sha256sum   = "641ae1858c0f660b4c3761286d627e1dcfd33dc35e7c83eb81ca9050b5bdc6d8"
+        }
+
+        listener "tcp" {
+          tls_disable = 1
+          address = "[::]:8200"
+          cluster_address = "[::]:8201"
+          telemetry {
+            unauthenticated_metrics_access = "true"
+          }
+        }
+
+        storage "raft" {
+          path = "/openbao/data"
+        }
+
+        service_registration "kubernetes" {}
+
+        telemetry {
+          prometheus_retention_time = "30s"
+          disable_hostname = true
+        }
+
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    activeService: true
+    hosts:
+      - host: openbao.miak-it.dev
+        paths:
+          - /
+
+ui:
+  enabled: true
+  serviceType: ClusterIP
+
+serverTelemetry:
+  serviceMonitor:
+    enabled: true
+    selectors:
+      release: kube-prometheus-stack
+    interval: 30s
+    scrapeTimeout: 10s
+  grafanaDashboard:
+    enabled: true
+    namespace: monitoring
+    defaultLabel: true
+
+snapshotAgent:
+  enabled: false

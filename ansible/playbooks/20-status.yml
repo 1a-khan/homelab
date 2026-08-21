@@ -1,0 +1,24 @@
+---
+- name: Show k3s status
+  hosts: k3s_servers
+  become: true
+
+  tasks:
+    - name: Get nodes
+      ansible.builtin.command: kubectl get nodes -o wide
+      changed_when: false
+      register: nodes
+
+    - name: Get all pods
+      ansible.builtin.command: kubectl get pods -A -o wide
+      changed_when: false
+      register: pods
+
+    - name: Print nodes
+      ansible.builtin.debug:
+        var: nodes.stdout_lines
+
+    - name: Print pods
+      ansible.builtin.debug:
+        var: pods.stdout_lines
+

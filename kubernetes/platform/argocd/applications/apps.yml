@@ -1,0 +1,95 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: calendar-agent
+  namespace: argocd
+spec:
+  project: homelab
+  source:
+    repoURL: https://github.com/1a-khan/homelab.git
+    targetRevision: main
+    path: kubernetes/apps/calendar-agent
+    directory:
+      include: '{namespace.yml,external-secret-api-key.yml,calendar-agent-api.yml,ingress.yml}'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: calendar-agent
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kids-prep
+  namespace: argocd
+spec:
+  project: homelab
+  source:
+    repoURL: https://github.com/1a-khan/homelab.git
+    targetRevision: main
+    path: kubernetes/apps/kids-prep
+    directory:
+      include: '{namespace.yml,external-secret.yml,kids-prep.yml,ingress.yml}'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kids-prep
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: n8n
+  namespace: argocd
+spec:
+  project: homelab
+  source:
+    repoURL: https://github.com/1a-khan/homelab.git
+    targetRevision: main
+    path: kubernetes/apps/n8n
+    directory:
+      include: '{namespace.yml,external-secret.yml,n8n.yml,ingress.yml}'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: n8n
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: windmill
+  namespace: argocd
+spec:
+  project: homelab
+  source:
+    repoURL: https://github.com/1a-khan/homelab.git
+    targetRevision: main
+    path: kubernetes/apps/windmill
+    directory:
+      include: '{namespace.yml,external-secret.yml,windmill.yml,ingress.yml}'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: windmill
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

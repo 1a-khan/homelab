@@ -1,0 +1,118 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cloudflared
+  namespace: argocd
+spec:
+  project: homelab
+  source:
+    repoURL: https://github.com/1a-khan/homelab.git
+    targetRevision: main
+    path: kubernetes/platform/cloudflare
+    directory:
+      include: '{namespace.yml,cloudflared.yml}'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cloudflare
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: costs
+  namespace: argocd
+spec:
+  project: homelab
+  source:
+    repoURL: https://github.com/1a-khan/homelab.git
+    targetRevision: main
+    path: kubernetes/platform/costs
+    directory:
+      include: '{namespace.yml,cost-exporter.yml,grafana-dashboard-costs.yml}'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: costs
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: graph-credentials
+  namespace: argocd
+spec:
+  project: homelab
+  source:
+    repoURL: https://github.com/1a-khan/homelab.git
+    targetRevision: main
+    path: kubernetes/platform/graph-credentials
+    directory:
+      include: '{cluster-external-secrets.yml,example-python-app-namespace.yml,graph-credential-generators.yml}'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: external-secrets
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: postgres
+  namespace: argocd
+spec:
+  project: homelab
+  source:
+    repoURL: https://github.com/1a-khan/homelab.git
+    targetRevision: main
+    path: kubernetes/platform/postgres
+    directory:
+      include: '{namespace.yml,external-secret.yml,postgres.yml}'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: database
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: valkey
+  namespace: argocd
+spec:
+  project: homelab
+  source:
+    repoURL: https://github.com/1a-khan/homelab.git
+    targetRevision: main
+    path: kubernetes/platform/valkey
+    directory:
+      include: '{namespace.yml,external-secret.yml,valkey.yml}'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: valkey
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

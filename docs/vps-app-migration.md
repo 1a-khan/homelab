@@ -19,8 +19,8 @@ grafana/monitoring    VPS monitoring stack, likely replaced by local monitoring
 
 1. OpenBao: migrated to k3s and cut over to `openbao.miak-it.com`.
 2. n8n: migrated to k3s and cut over to `n8n.miak-it.com`.
-3. Windmill: migrate after n8n, preserving `BASE_URL` and database.
-4. Custom apps: `kids-prep` and unknown app `uoow44...`.
+3. Windmill: migrated to k3s and cut over to `windmill.miak-it.com`.
+4. Kids-prep: migrated to k3s and cut over to `kids-prep.miak-it.com`.
 5. Decommission duplicated VPS monitoring after local dashboards cover what we need.
 
 Do not migrate `hermes`; it is no longer needed.
@@ -206,3 +206,61 @@ windmill.miak-it.com
 old: A 116.203.131.147
 new: CNAME 50327130-69c0-4ff9-a8c2-d44d516dd17d.cfargotunnel.com
 ```
+
+## Kids-prep Migration
+
+Status: production cutover completed on 2026-08-21.
+
+Production hostname:
+
+```text
+https://kids-prep.miak-it.com
+```
+
+Current target:
+
+```text
+Cloudflare proxied CNAME -> 50327130-69c0-4ff9-a8c2-d44d516dd17d.cfargotunnel.com -> k3s Traefik -> kids-prep namespace
+```
+
+VPS source:
+
+```text
+Container: kids-prep-tnsrh6m8fme22otryvwtzfdv-190624758249
+Image: ghcr.io/1a-khan/kids-prep:latest
+Volume: tnsrh6m8fme22otryvwtzfdv_kids-prep-data -> /app/data
+Database: /app/data/kids_prep_prod.db
+```
+
+Backup archive verified:
+
+```text
+backups/kids-prep/kids-prep-data-20260821T120924Z.tgz
+backups/kids-prep/kids-prep-20260821T120924Z.sha256
+```
+
+Target design:
+
+```text
+k3s namespace: kids-prep
+Persistent volume: kids-prep-data
+Secrets: OpenBao apps/kids-prep -> ExternalSecret kids-prep
+Ingress: kids-prep.miak-it.com -> kids-prep service
+```
+
+Restore command:
+
+```bash
+cd /home/dev/Desktop/local-svr/homelab
+export KUBECONFIG="$PWD/kubeconfig"
+scripts/kids-prep-restore-to-k3s.sh backups/kids-prep/kids-prep-data-20260821T120924Z.tgz
+```
+
+After restore, run the app migration once if the restored SQLite database is older than the current image:
+
+```bash
+kubectl -n kids-prep exec deployment/kids-prep -- /app/bin/migrate
+kubectl -n kids-prep rollout restart deployment/kids-prep
+```
+
+Note: historical Notion sync records may contain text that exceeds Notion rich text limits. That warning is application data cleanup, not a Kubernetes migration blocker.

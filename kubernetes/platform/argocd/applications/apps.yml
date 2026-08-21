@@ -6,7 +6,7 @@ metadata:
 spec:
   project: homelab
   source:
-    repoURL: https://github.com/1a-khan/homelab.git
+    repoURL: git@github.com:1a-khan/homelab.git
     targetRevision: main
     path: kubernetes/apps/calendar-agent
     directory:
@@ -30,7 +30,7 @@ metadata:
 spec:
   project: homelab
   source:
-    repoURL: https://github.com/1a-khan/homelab.git
+    repoURL: git@github.com:1a-khan/homelab.git
     targetRevision: main
     path: kubernetes/apps/kids-prep
     directory:
@@ -54,7 +54,7 @@ metadata:
 spec:
   project: homelab
   source:
-    repoURL: https://github.com/1a-khan/homelab.git
+    repoURL: git@github.com:1a-khan/homelab.git
     targetRevision: main
     path: kubernetes/apps/n8n
     directory:
@@ -78,7 +78,7 @@ metadata:
 spec:
   project: homelab
   source:
-    repoURL: https://github.com/1a-khan/homelab.git
+    repoURL: git@github.com:1a-khan/homelab.git
     targetRevision: main
     path: kubernetes/apps/windmill
     directory:

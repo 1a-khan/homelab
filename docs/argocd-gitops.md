@@ -5,8 +5,10 @@ Argo CD solves the Coolify auto-deploy problem by watching the GitHub repository
 Repository:
 
 ```text
-https://github.com/1a-khan/homelab.git
+git@github.com:1a-khan/homelab.git
 ```
+
+The repository is private, so Argo CD uses a read-only GitHub deploy key. The private key is stored only as an Argo CD repository secret in the cluster, not in Git.
 
 ## Design
 
@@ -44,6 +46,34 @@ kubectl apply -f kubernetes/platform/argocd/namespace.yml
   --namespace argocd \
   --values kubernetes/platform/argocd/argocd-values.yml \
   --wait
+```
+
+Create a read-only GitHub deploy key for Argo CD. Add the public key to the GitHub repository as a read-only deploy key:
+
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/argocd_homelab_deploy_key -C "argocd-homelab-k3s"
+gh repo deploy-key add ~/.ssh/argocd_homelab_deploy_key.pub \
+  --repo 1a-khan/homelab \
+  --title "argocd-homelab-k3s"
+```
+
+Store the private key in Argo CD:
+
+```bash
+kubectl -n argocd create secret generic repo-homelab-github \
+  --from-literal=type=git \
+  --from-literal=url='git@github.com:1a-khan/homelab.git' \
+  --from-file=sshPrivateKey="$HOME/.ssh/argocd_homelab_deploy_key" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+kubectl -n argocd label secret repo-homelab-github \
+  argocd.argoproj.io/secret-type=repository \
+  --overwrite
+```
+
+Create the GitOps root:
+
+```bash
 
 kubectl apply -f kubernetes/platform/argocd/project.yml
 kubectl apply -f kubernetes/platform/argocd/root-application.yml

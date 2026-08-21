@@ -6,7 +6,7 @@ metadata:
 spec:
   description: Homelab k3s GitOps workloads
   sourceRepos:
-    - https://github.com/1a-khan/homelab.git
+    - git@github.com:1a-khan/homelab.git
   destinations:
     - namespace: '*'
       server: https://kubernetes.default.svc

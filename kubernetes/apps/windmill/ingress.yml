@@ -1,0 +1,18 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: windmill
+  namespace: windmill
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: windmill.miak-it.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: windmill
+                port:
+                  number: 8000

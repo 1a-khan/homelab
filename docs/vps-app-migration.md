@@ -20,8 +20,10 @@ grafana/monitoring    VPS monitoring stack, likely replaced by local monitoring
 1. OpenBao: migrated to k3s and cut over to `openbao.miak-it.com`.
 2. n8n: migrated to k3s and cut over to `n8n.miak-it.com`.
 3. Windmill: migrate after n8n, preserving `BASE_URL` and database.
-4. Custom apps: `kids-prep`, `hermes`, and unknown app `uoow44...`.
+4. Custom apps: `kids-prep` and unknown app `uoow44...`.
 5. Decommission duplicated VPS monitoring after local dashboards cover what we need.
+
+Do not migrate `hermes`; it is no longer needed.
 
 ## n8n Migration
 
@@ -109,4 +111,98 @@ scripts/iac-import-cloudflare-dns-record.sh \
   cloudflare_dns_record.n8n_prod \
   0c7c24e4a1b41fc6cd480c93bfdfdd99 \
   n8n.miak-it.com
+```
+
+## Windmill Migration
+
+Status: prepared, not cut over yet.
+
+Production hostname:
+
+```text
+https://windmill.miak-it.com
+```
+
+Current VPS source:
+
+```text
+Coolify service ID: ngck8kk48wcgoc44kos444w8
+Windmill image: ghcr.io/windmill-labs/windmill:1.764.0
+Database container: db-ngck8kk48wcgoc44kos444w8
+Database volume: ngck8kk48wcgoc44kos444w8_db-data
+Database name on VPS: windmill-db
+```
+
+Target design:
+
+```text
+k3s namespace: windmill
+Postgres: shared postgres.database.svc.cluster.local
+Target database: windmill
+Secrets: OpenBao apps/windmill -> ExternalSecret windmill
+Ingress: windmill.miak-it.com -> windmill service
+```
+
+Important: do not deploy a separate Windmill Postgres container locally. Windmill must use the unified platform Postgres server.
+
+Backup first:
+
+```bash
+cd /home/dev/Desktop/local-svr/homelab
+scripts/windmill-backup-from-vps.sh
+```
+
+Copy current Windmill database credentials from Coolify into OpenBao:
+
+```bash
+scripts/windmill-export-secrets-to-openbao.sh
+```
+
+Prepare the Kubernetes target:
+
+```bash
+export KUBECONFIG="$PWD/kubeconfig"
+kubectl apply -f kubernetes/apps/windmill/namespace.yml
+kubectl apply -f kubernetes/apps/windmill/external-secret.yml
+kubectl get externalsecret -n windmill windmill
+kubectl get secret -n windmill windmill
+```
+
+Restore the Windmill dump into the shared Postgres server:
+
+```bash
+scripts/windmill-restore-to-k3s.sh
+```
+
+Deploy Windmill app components:
+
+```bash
+kubectl apply -f kubernetes/apps/windmill/windmill.yml
+kubectl apply -f kubernetes/apps/windmill/ingress.yml
+kubectl get pods -n windmill
+kubectl get ingress -n windmill
+```
+
+Before OpenTofu manages the existing production DNS record, import it:
+
+```bash
+scripts/iac-import-cloudflare-dns-record.sh \
+  cloudflare_dns_record.windmill_prod \
+  <cloudflare_record_id> \
+  windmill.miak-it.com
+```
+
+Cut over production DNS only after the local app is healthy:
+
+```bash
+scripts/iac-tofu-cloudflare.sh plan
+scripts/iac-tofu-cloudflare.sh apply
+```
+
+Expected DNS change:
+
+```text
+windmill.miak-it.com
+old: A 116.203.131.147
+new: CNAME 50327130-69c0-4ff9-a8c2-d44d516dd17d.cfargotunnel.com
 ```

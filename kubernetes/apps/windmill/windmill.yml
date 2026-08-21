@@ -1,0 +1,265 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: windmill-worker-cache
+  namespace: windmill
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 8Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: windmill-worker-logs
+  namespace: windmill
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 4Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: windmill-lsp-cache
+  namespace: windmill
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 4Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: windmill-server
+  namespace: windmill
+  annotations:
+    secret.reloader.stakater.com/reload: "windmill"
+spec:
+  strategy:
+    type: Recreate
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: windmill
+      app.kubernetes.io/component: server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: windmill
+        app.kubernetes.io/component: server
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: windmill
+          image: ghcr.io/windmill-labs/windmill:1.764.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              name: http
+          envFrom:
+            - secretRef:
+                name: windmill
+          env:
+            - name: MODE
+              value: server
+            - name: BASE_URL
+              value: https://windmill.miak-it.com
+            - name: TZ
+              value: UTC
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          volumeMounts:
+            - name: logs
+              mountPath: /tmp/windmill/logs
+      volumes:
+        - name: logs
+          persistentVolumeClaim:
+            claimName: windmill-worker-logs
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: windmill-worker-default
+  namespace: windmill
+  annotations:
+    secret.reloader.stakater.com/reload: "windmill"
+spec:
+  strategy:
+    type: Recreate
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: windmill
+      app.kubernetes.io/component: worker-default
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: windmill
+        app.kubernetes.io/component: worker-default
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: windmill-worker
+          image: ghcr.io/windmill-labs/windmill:1.764.0
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - secretRef:
+                name: windmill
+          env:
+            - name: MODE
+              value: worker
+            - name: WORKER_GROUP
+              value: default
+            - name: TZ
+              value: UTC
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 3Gi
+          volumeMounts:
+            - name: cache
+              mountPath: /tmp/windmill/cache
+            - name: logs
+              mountPath: /tmp/windmill/logs
+      volumes:
+        - name: cache
+          persistentVolumeClaim:
+            claimName: windmill-worker-cache
+        - name: logs
+          persistentVolumeClaim:
+            claimName: windmill-worker-logs
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: windmill-worker-native
+  namespace: windmill
+  annotations:
+    secret.reloader.stakater.com/reload: "windmill"
+spec:
+  strategy:
+    type: Recreate
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: windmill
+      app.kubernetes.io/component: worker-native
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: windmill
+        app.kubernetes.io/component: worker-native
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: windmill-worker-native
+          image: ghcr.io/windmill-labs/windmill:1.764.0
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - secretRef:
+                name: windmill
+          env:
+            - name: MODE
+              value: worker
+            - name: WORKER_GROUP
+              value: native
+            - name: NATIVE_MODE
+              value: "true"
+            - name: NUM_WORKERS
+              value: "4"
+            - name: SLEEP_QUEUE
+              value: "200"
+            - name: TZ
+              value: UTC
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 2Gi
+          volumeMounts:
+            - name: logs
+              mountPath: /tmp/windmill/logs
+      volumes:
+        - name: logs
+          persistentVolumeClaim:
+            claimName: windmill-worker-logs
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: windmill-lsp
+  namespace: windmill
+spec:
+  strategy:
+    type: Recreate
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: windmill
+      app.kubernetes.io/component: lsp
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: windmill
+        app.kubernetes.io/component: lsp
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: lsp
+          image: ghcr.io/windmill-labs/windmill-lsp@sha256:4e76621383915a938b8d45a9fab4bf4b8769068a73c079fccbbbc23be8da092e
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          volumeMounts:
+            - name: cache
+              mountPath: /root/.cache
+      volumes:
+        - name: cache
+          persistentVolumeClaim:
+            claimName: windmill-lsp-cache
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: windmill
+  namespace: windmill
+spec:
+  selector:
+    app.kubernetes.io/name: windmill
+    app.kubernetes.io/component: server
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http

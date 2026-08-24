@@ -59,6 +59,46 @@ TF_VAR_hcloud_token
 scripts/iac-tofu-hetzner.sh init
 ```
 
+## Inventory Current Project
+
+Before importing or creating anything, list what the Hetzner project currently has:
+
+```bash
+scripts/iac-hetzner-inventory.sh
+```
+
+This lists:
+
+```text
+servers
+networks
+firewalls
+SSH keys
+volumes
+load balancers
+cheapest x86 server types
+```
+
+For raw JSON:
+
+```bash
+scripts/iac-hetzner-inventory.sh raw
+```
+
+For all server types:
+
+```bash
+scripts/iac-hetzner-inventory.sh server-types
+```
+
+For cheap x86 options sorted by monthly gross price:
+
+```bash
+scripts/iac-hetzner-inventory.sh cheap
+```
+
+Use this before creating a new VPS. It shows the current project inventory and the currently available server sizes/prices returned by the Hetzner API.
+
 ## Lookup Existing Server
 
 Copy the example vars:

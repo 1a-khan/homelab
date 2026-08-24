@@ -1,0 +1,111 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: miak-website
+  namespace: miak-website
+  annotations:
+    secret.reloader.stakater.com/reload: "miak-website"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: miak-website
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: miak-website
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: miak-website
+          image: ghcr.io/1a-khan/miak-phoenix-website:cf68f4d37b5750154c115b02cd2b2c91bd838f8c
+          imagePullPolicy: Never
+          command:
+            - /app/bin/server
+          ports:
+            - name: http
+              containerPort: 4000
+          envFrom:
+            - secretRef:
+                name: miak-website
+          env:
+            - name: COMPANY_CITY
+              value: Lüdenscheid
+            - name: COMPANY_COUNTRY
+              value: Deutschland
+            - name: COMPANY_EMAIL
+              value: support@miak-it.de
+            - name: COMPANY_LANDLINE
+              value: "02351 1758665"
+            - name: COMPANY_MOBILE
+              value: "+49 176 24 610 633"
+            - name: COMPANY_NAME
+              value: MIAK IT
+            - name: COMPANY_OWNER
+              value: Ammad Khan
+            - name: COMPANY_STREET
+              value: Breslauer Str. 10
+            - name: COMPANY_WEBSITE
+              value: https://miak-it.de
+            - name: COMPANY_WHATSAPP
+              value: "+49 176 24 610 633"
+            - name: COMPANY_ZIP
+              value: "58511"
+            - name: HOST
+              value: 0.0.0.0
+            - name: MAKE_WEBHOOK_URL
+              value: https://hook.eu2.make.com/3m26luuuoyh7t7a95xyksgtic0ep9yte
+            - name: MIX_ENV
+              value: prod
+            - name: PHX_HOST
+              value: miak-it.de
+            - name: PORT
+              value: "4000"
+            - name: TRUST_CLOUDFLARE_HEADERS
+              value: "false"
+            - name: TURNSTILE_EXPECTED_HOSTNAME
+              value: miak-it.de
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+              httpHeaders:
+                - name: Host
+                  value: miak-it.de
+                - name: X-Forwarded-Proto
+                  value: https
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+              httpHeaders:
+                - name: Host
+                  value: miak-it.de
+                - name: X-Forwarded-Proto
+                  value: https
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: miak-website
+  namespace: miak-website
+spec:
+  selector:
+    app.kubernetes.io/name: miak-website
+  ports:
+    - name: http
+      port: 4000
+      targetPort: http

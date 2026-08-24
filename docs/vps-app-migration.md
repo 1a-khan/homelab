@@ -21,7 +21,8 @@ grafana/monitoring    VPS monitoring stack, likely replaced by local monitoring
 2. n8n: migrated to k3s and cut over to `n8n.miak-it.com`.
 3. Windmill: migrated to k3s and cut over to `windmill.miak-it.com`.
 4. Kids-prep: migrated to k3s and cut over to `kids-prep.miak-it.com`.
-5. Decommission duplicated VPS monitoring after local dashboards cover what we need.
+5. MIAK website: prepared for k3s migration from `phx-miak-website`.
+6. Decommission duplicated VPS monitoring after local dashboards cover what we need.
 
 Do not migrate `hermes`; it is no longer needed.
 
@@ -264,3 +265,63 @@ kubectl -n kids-prep rollout restart deployment/kids-prep
 ```
 
 Note: historical Notion sync records may contain text that exceeds Notion rich text limits. That warning is application data cleanup, not a Kubernetes migration blocker.
+
+## MIAK Website Migration
+
+Status: prepared for k3s cutover.
+
+Production hostnames:
+
+```text
+https://miak-it.de
+https://www.miak-it.de
+```
+
+VPS source:
+
+```text
+Container: uoow44sg0w4w4gcko8ok88o0-001131891985
+Coolify name: phx-miak-website
+Port: 4000
+Image commit: cf68f4d37b5750154c115b02cd2b2c91bd838f8c
+Persistent volumes: none
+```
+
+Target design:
+
+```text
+k3s namespace: miak-website
+Secrets: OpenBao apps/miak-website -> ExternalSecret miak-website
+Ingress: miak-it.de and www.miak-it.de -> miak-website service
+```
+
+The initial migration imports the exact VPS image into the k3s node and tags it as:
+
+```text
+ghcr.io/1a-khan/miak-phoenix-website:cf68f4d37b5750154c115b02cd2b2c91bd838f8c
+```
+
+The manifest uses `imagePullPolicy: Never` because this first migration preserves the already-running VPS image instead of releasing a new image from source. Replace this with normal GHCR pull behavior after GitHub Actions builds and pushes website images.
+
+Copy website secrets from VPS env into OpenBao:
+
+```bash
+cd /home/dev/Desktop/local-svr/homelab
+export KUBECONFIG="$PWD/kubeconfig"
+scripts/miak-website-export-secrets-to-openbao.sh
+```
+
+Deploy and verify before DNS cutover:
+
+```bash
+kubectl apply -f kubernetes/apps/miak-website/namespace.yml
+kubectl apply -f kubernetes/apps/miak-website/external-secret.yml
+kubectl apply -f kubernetes/apps/miak-website/miak-website.yml
+kubectl apply -f kubernetes/apps/miak-website/ingress.yml
+
+kubectl get pods -n miak-website
+curl -H "Host: miak-it.de" http://192.168.8.140/healthz
+curl -H "Host: www.miak-it.de" http://192.168.8.140/healthz
+```
+
+DNS cutover uses OpenTofu. The existing root A/AAAA records for `miak-it.de` must be replaced carefully because an apex CNAME cannot coexist with A/AAAA records.

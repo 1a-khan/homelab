@@ -137,6 +137,7 @@ Apps:
 ```text
 calendar-agent
 kids-prep
+miak-website
 n8n
 windmill
 ```

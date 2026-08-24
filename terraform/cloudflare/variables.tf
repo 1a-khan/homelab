@@ -27,6 +27,17 @@ variable "cloudflare_prod_zone_name" {
   default     = "miak-it.com"
 }
 
+variable "cloudflare_de_zone_id" {
+  type        = string
+  description = "Cloudflare zone ID for miak-it.de."
+}
+
+variable "cloudflare_de_zone_name" {
+  type        = string
+  description = "German production website domain in Cloudflare."
+  default     = "miak-it.de"
+}
+
 variable "tunnel_name" {
   type    = string
   default = "mini-pc-k3s-prod"

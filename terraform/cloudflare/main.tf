@@ -74,6 +74,14 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "homelab" {
         service  = "http://traefik.kube-system.svc.cluster.local:80"
       },
       {
+        hostname = var.cloudflare_de_zone_name
+        service  = "http://traefik.kube-system.svc.cluster.local:80"
+      },
+      {
+        hostname = "www.${var.cloudflare_de_zone_name}"
+        service  = "http://traefik.kube-system.svc.cluster.local:80"
+      },
+      {
         service = "http_status:404"
       }
     ]
@@ -255,6 +263,24 @@ resource "cloudflare_dns_record" "windmill_prod" {
 resource "cloudflare_dns_record" "kids_prep_prod" {
   zone_id = var.cloudflare_prod_zone_id
   name    = "kids-prep.${var.cloudflare_prod_zone_name}"
+  content = "${cloudflare_zero_trust_tunnel_cloudflared.homelab.id}.cfargotunnel.com"
+  type    = "CNAME"
+  ttl     = 1
+  proxied = true
+}
+
+resource "cloudflare_dns_record" "website_de_root" {
+  zone_id = var.cloudflare_de_zone_id
+  name    = var.cloudflare_de_zone_name
+  content = "${cloudflare_zero_trust_tunnel_cloudflared.homelab.id}.cfargotunnel.com"
+  type    = "CNAME"
+  ttl     = 1
+  proxied = true
+}
+
+resource "cloudflare_dns_record" "website_de_www" {
+  zone_id = var.cloudflare_de_zone_id
+  name    = "www.${var.cloudflare_de_zone_name}"
   content = "${cloudflare_zero_trust_tunnel_cloudflared.homelab.id}.cfargotunnel.com"
   type    = "CNAME"
   ttl     = 1

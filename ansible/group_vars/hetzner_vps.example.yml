@@ -1,0 +1,15 @@
+---
+vps_admin_user: dev_prod
+vps_admin_ssh_public_key: "ssh-ed25519 REPLACE_ME"
+vps_timezone: Europe/Berlin
+
+# For first learning runs this can stay open because Hetzner firewall and fail2ban
+# still protect SSH. For production-style staging, replace it with your public IP:
+#   - "203.0.113.10/32"
+vps_ssh_allowed_cidrs:
+  - "0.0.0.0/0"
+  - "::/0"
+
+vps_allow_public_web: true
+vps_install_docker: true
+vps_install_node_exporter: true

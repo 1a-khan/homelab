@@ -1,0 +1,169 @@
+---
+- name: Bootstrap hardened Hetzner VPS
+  hosts: hetzner_vps
+  become: true
+
+  handlers:
+    - name: Restart ssh
+      ansible.builtin.service:
+        name: ssh
+        state: restarted
+
+    - name: Restart fail2ban
+      ansible.builtin.service:
+        name: fail2ban
+        state: restarted
+
+  tasks:
+    - name: Require admin SSH key
+      ansible.builtin.assert:
+        that:
+          - vps_admin_ssh_public_key is defined
+          - vps_admin_ssh_public_key | length > 20
+          - "'REPLACE_ME' not in vps_admin_ssh_public_key"
+        fail_msg: "Set vps_admin_ssh_public_key in ansible/group_vars/hetzner_vps.yml first."
+
+    - name: Set timezone
+      community.general.timezone:
+        name: "{{ vps_timezone | default('Europe/Berlin') }}"
+
+    - name: Install baseline packages
+      ansible.builtin.apt:
+        name:
+          - apt-transport-https
+          - auditd
+          - ca-certificates
+          - curl
+          - fail2ban
+          - git
+          - gnupg
+          - htop
+          - jq
+          - net-tools
+          - qemu-guest-agent
+          - unattended-upgrades
+          - ufw
+          - vim
+        state: present
+        update_cache: true
+
+    - name: Install Docker packages
+      ansible.builtin.apt:
+        name:
+          - docker.io
+          - docker-compose-v2
+        state: present
+      when: vps_install_docker | default(true) | bool
+
+    - name: Install node exporter
+      ansible.builtin.apt:
+        name: prometheus-node-exporter
+        state: present
+      when: vps_install_node_exporter | default(true) | bool
+
+    - name: Ensure admin user exists
+      ansible.builtin.user:
+        name: "{{ vps_admin_user | default('dev_prod') }}"
+        groups: "{{ 'sudo,docker' if vps_install_docker | default(true) | bool else 'sudo' }}"
+        append: true
+        shell: /bin/bash
+        create_home: true
+
+    - name: Install admin SSH key
+      ansible.posix.authorized_key:
+        user: "{{ vps_admin_user | default('dev_prod') }}"
+        key: "{{ vps_admin_ssh_public_key }}"
+        state: present
+
+    - name: Allow passwordless sudo for admin user
+      ansible.builtin.copy:
+        dest: "/etc/sudoers.d/90-{{ vps_admin_user | default('dev_prod') }}"
+        owner: root
+        group: root
+        mode: "0440"
+        content: "{{ vps_admin_user | default('dev_prod') }} ALL=(ALL) NOPASSWD:ALL\n"
+        validate: "visudo -cf %s"
+
+    - name: Harden SSH daemon
+      ansible.builtin.copy:
+        dest: /etc/ssh/sshd_config.d/99-miak-hardening.conf
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          PermitRootLogin no
+          PasswordAuthentication no
+          PubkeyAuthentication yes
+          KbdInteractiveAuthentication no
+          X11Forwarding no
+          AllowUsers {{ vps_admin_user | default('dev_prod') }}
+      notify: Restart ssh
+
+    - name: Validate SSH daemon configuration
+      ansible.builtin.command: sshd -t
+      changed_when: false
+
+    - name: Configure fail2ban sshd jail
+      ansible.builtin.copy:
+        dest: /etc/fail2ban/jail.d/sshd.local
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          [sshd]
+          enabled = true
+          maxretry = 5
+          findtime = 10m
+          bantime = 1h
+      notify: Restart fail2ban
+
+    - name: Configure UFW defaults
+      community.general.ufw:
+        direction: "{{ item.direction }}"
+        policy: "{{ item.policy }}"
+      loop:
+        - { direction: incoming, policy: deny }
+        - { direction: outgoing, policy: allow }
+
+    - name: Allow SSH
+      community.general.ufw:
+        rule: allow
+        port: "22"
+        proto: tcp
+        from_ip: "{{ item }}"
+      loop: "{{ vps_ssh_allowed_cidrs | default(['0.0.0.0/0', '::/0']) }}"
+
+    - name: Allow HTTP
+      community.general.ufw:
+        rule: allow
+        port: "80"
+        proto: tcp
+      when: vps_allow_public_web | default(true) | bool
+
+    - name: Allow HTTPS
+      community.general.ufw:
+        rule: allow
+        port: "443"
+        proto: tcp
+      when: vps_allow_public_web | default(true) | bool
+
+    - name: Enable UFW
+      community.general.ufw:
+        state: enabled
+
+    - name: Enable unattended upgrades
+      ansible.builtin.copy:
+        dest: /etc/apt/apt.conf.d/20auto-upgrades
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          APT::Periodic::Update-Package-Lists "1";
+          APT::Periodic::Unattended-Upgrade "1";
+
+    - name: Enable useful services
+      ansible.builtin.service:
+        name: "{{ item }}"
+        enabled: true
+        state: started
+      loop: "{{ ['qemu-guest-agent', 'fail2ban'] + (['docker'] if vps_install_docker | default(true) | bool else []) + (['prometheus-node-exporter'] if vps_install_node_exporter | default(true) | bool else []) }}"

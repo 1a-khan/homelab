@@ -11,6 +11,7 @@ tfplan*
 
 # Ansible local/runtime files
 ansible/inventory.ini
+ansible/hetzner-staging.ini
 ansible/group_vars/all.yml
 ansible/*.retry
 

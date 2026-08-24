@@ -35,3 +35,24 @@ managed_servers = {
   #   }
   # }
 }
+
+# Disposable staging VPS examples. These are safe to destroy when the test is done.
+#
+# staging_allowed_ssh_cidrs = [
+#   "YOUR_PUBLIC_IP/32",
+# ]
+#
+# staging_servers = {
+#   app_test = {
+#     name        = "staging-app-test-01"
+#     server_type = "cx23"
+#     image       = "ubuntu-24.04"
+#     location    = "nbg1"
+#     ssh_keys    = ["miak-hetzner-admin"]
+#     network_id  = 11887785
+#     labels = {
+#       purpose = "application-staging"
+#       ttl     = "delete-after-testing"
+#     }
+#   }
+# }

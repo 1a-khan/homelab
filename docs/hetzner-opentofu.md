@@ -91,13 +91,32 @@ For all server types:
 scripts/iac-hetzner-inventory.sh server-types
 ```
 
-For cheap x86 options sorted by monthly gross price:
+For cheap x86 options sorted by monthly gross price in German/Finland locations:
 
 ```bash
 scripts/iac-hetzner-inventory.sh cheap
 ```
 
-Use this before creating a new VPS. It shows the current project inventory and the currently available server sizes/prices returned by the Hetzner API.
+Use this before creating a new VPS. It shows the current project inventory and the currently offered server sizes/prices returned by the Hetzner API.
+
+The `cheap` and `server-types` modes show:
+
+```text
+nbg1
+fsn1
+hel1
+germany_locations
+```
+
+This means the type is offered/priced for those locations in the API. It is not a hard guarantee of real-time stock capacity. Creating a server can still fail if Hetzner has no capacity for that exact type/location at that moment.
+
+The network inventory includes subnet details:
+
+```text
+type:ip_range:network_zone:gw=gateway
+```
+
+Hetzner networks can connect servers across locations when they are in the same network zone. For Germany/Finland cloud locations, the relevant network zone is usually `eu-central`.
 
 ## Lookup Existing Server
 

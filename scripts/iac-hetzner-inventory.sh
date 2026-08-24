@@ -120,7 +120,12 @@ fi
 
 if [[ "${mode}" == "server-types" ]]; then
   jq -r '
-    ["name","arch","cores","memory_gb","disk_gb","storage_type","monthly_gross_from"],
+    def price_for($loc):
+      ([.prices[]? | select(.location == $loc) | .price_monthly.gross | tonumber] | min) // "-";
+    def germany_locations:
+      ([.prices[]?.location | select(. == "nbg1" or . == "fsn1" or . == "hel1")] | unique | join(","));
+
+    ["name","arch","cores","memory_gb","disk_gb","storage_type","nbg1_gross","fsn1_gross","hel1_gross","germany_locations"],
     (.server_types[]
       | [
           .name,
@@ -129,7 +134,10 @@ if [[ "${mode}" == "server-types" ]]; then
           (.memory|tostring),
           (.disk|tostring),
           .storage_type,
-          (([.prices[]?.price_monthly.gross] | map(select(. != null) | tonumber) | min) // "n/a")
+          (price_for("nbg1")|tostring),
+          (price_for("fsn1")|tostring),
+          (price_for("hel1")|tostring),
+          germany_locations
         ])
     | @tsv
   ' <<<"${server_types_json}" | column -t -s $'\t'
@@ -138,7 +146,12 @@ fi
 
 if [[ "${mode}" == "cheap" ]]; then
   jq -r '
-    ["name","arch","cores","memory_gb","disk_gb","monthly_gross_from"],
+    def germany_prices:
+      [.prices[]? | select(.location == "nbg1" or .location == "fsn1" or .location == "hel1") | .price_monthly.gross | tonumber];
+    def germany_locations:
+      ([.prices[]?.location | select(. == "nbg1" or . == "fsn1" or . == "hel1")] | unique | join(","));
+
+    ["name","arch","cores","memory_gb","disk_gb","germany_monthly_gross_from","germany_locations"],
     ([.server_types[]
       | select(.architecture == "x86")
       | {
@@ -147,12 +160,13 @@ if [[ "${mode}" == "cheap" ]]; then
           cores,
           memory,
           disk,
-          monthly: (([.prices[]?.price_monthly.gross] | map(select(. != null) | tonumber) | min) // null)
+          monthly: (germany_prices | min),
+          germany_locations: germany_locations
         }
       | select(.monthly != null)]
       | sort_by(.monthly)
       | .[:15][]
-      | [.name, .architecture, (.cores|tostring), (.memory|tostring), (.disk|tostring), (.monthly|tostring)])
+      | [.name, .architecture, (.cores|tostring), (.memory|tostring), (.disk|tostring), (.monthly|tostring), .germany_locations])
     | @tsv
   ' <<<"${server_types_json}" | column -t -s $'\t'
   exit 0
@@ -192,7 +206,7 @@ jq -r '
           .name,
           (.id|tostring),
           .ip_range,
-          (.subnets | length | tostring),
+          (.subnets | map("\(.type):\(.ip_range):\(.network_zone):gw=\(.gateway)") | join(",")),
           (.routes | length | tostring),
           (.servers | map(tostring) | join(","))
         ])
@@ -279,7 +293,12 @@ jq -r '
 echo
 echo "== Cheapest x86 Server Types =="
 jq -r '
-  ["name","cores","memory_gb","disk_gb","monthly_gross_from"],
+  def germany_prices:
+    [.prices[]? | select(.location == "nbg1" or .location == "fsn1" or .location == "hel1") | .price_monthly.gross | tonumber];
+  def germany_locations:
+    ([.prices[]?.location | select(. == "nbg1" or . == "fsn1" or . == "hel1")] | unique | join(","));
+
+  ["name","cores","memory_gb","disk_gb","germany_monthly_gross_from","germany_locations"],
   ([.server_types[]
     | select(.architecture == "x86")
     | {
@@ -287,11 +306,12 @@ jq -r '
         cores,
         memory,
         disk,
-        monthly: (([.prices[]?.price_monthly.gross] | map(select(. != null) | tonumber) | min) // null)
+        monthly: (germany_prices | min),
+        germany_locations: germany_locations
       }
     | select(.monthly != null)]
     | sort_by(.monthly)
     | .[:10][]
-    | [.name, (.cores|tostring), (.memory|tostring), (.disk|tostring), (.monthly|tostring)])
+    | [.name, (.cores|tostring), (.memory|tostring), (.disk|tostring), (.monthly|tostring), .germany_locations])
   | @tsv
 ' <<<"${server_types_json}" | column -t -s $'\t'

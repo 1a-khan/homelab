@@ -1,0 +1,20 @@
+lookup_server_name = "dev-prod-16gb-nbg1"
+
+managed_servers = {
+  # Import an existing server before enabling management:
+  #
+  # scripts/iac-tofu-hetzner.sh import 'hcloud_server.servers["prod"]' <server-id>
+  #
+  # prod = {
+  #   name        = "dev-prod-16gb-nbg1"
+  #   server_type = "cx42"
+  #   image       = "ubuntu-24.04"
+  #   location    = "nbg1"
+  #   ssh_keys    = ["coolifyy key"]
+  #   backups     = false
+  #   labels = {
+  #     role        = "legacy-vps"
+  #     environment = "prod"
+  #   }
+  # }
+}

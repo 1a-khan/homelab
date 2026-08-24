@@ -70,17 +70,20 @@ cp terraform/hetzner/terraform.tfvars.example terraform/hetzner/terraform.tfvars
 Edit:
 
 ```hcl
-lookup_server_name = "dev-prod-16gb-nbg1"
+lookup_server_names = [
+  "dev-prod-16gb-nbg1",
+  "coolify-ubuntu-4gb-nbg1-1",
+]
 ```
 
 Then:
 
 ```bash
 scripts/iac-tofu-hetzner.sh plan
-scripts/iac-tofu-hetzner.sh output lookup_server
+scripts/iac-tofu-hetzner.sh output lookup_servers
 ```
 
-This should show the existing server ID, type, IP, datacenter, and status.
+This should show the existing server IDs, types, IPs, datacenters, and status. `terraform.tfvars` should contain only non-secret names and configuration. The Hetzner token stays in OpenBao.
 
 ## Import Existing Server
 
@@ -88,9 +91,9 @@ After the lookup tells us the real server ID, add a matching entry:
 
 ```hcl
 managed_servers = {
-  prod = {
+  prod_16gb = {
     name        = "dev-prod-16gb-nbg1"
-    server_type = "cx42"
+    server_type = "cx43"
     image       = "ubuntu-24.04"
     location    = "nbg1"
     ssh_keys    = ["coolifyy key"]
@@ -100,13 +103,27 @@ managed_servers = {
       environment = "prod"
     }
   }
+
+  coolify_4gb = {
+    name        = "coolify-ubuntu-4gb-nbg1-1"
+    server_type = "cx23"
+    image       = "ubuntu-24.04"
+    location    = "nbg1"
+    ssh_keys    = ["coolifyy key"]
+    backups     = false
+    labels = {
+      role        = "edge-vps"
+      environment = "prod"
+    }
+  }
 }
 ```
 
 Then import:
 
 ```bash
-scripts/iac-tofu-hetzner.sh import 'hcloud_server.servers["prod"]' <server-id>
+scripts/iac-tofu-hetzner.sh import 'hcloud_server.servers["prod_16gb"]' <server-id>
+scripts/iac-tofu-hetzner.sh import 'hcloud_server.servers["coolify_4gb"]' <server-id>
 ```
 
 Now run:

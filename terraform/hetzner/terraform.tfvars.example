@@ -1,19 +1,36 @@
-lookup_server_name = "dev-prod-16gb-nbg1"
+lookup_server_names = [
+  "dev-prod-16gb-nbg1",
+  "coolify-ubuntu-4gb-nbg1-1",
+]
 
 managed_servers = {
   # Import an existing server before enabling management:
   #
-  # scripts/iac-tofu-hetzner.sh import 'hcloud_server.servers["prod"]' <server-id>
+  # scripts/iac-tofu-hetzner.sh import 'hcloud_server.servers["prod_16gb"]' <server-id>
+  # scripts/iac-tofu-hetzner.sh import 'hcloud_server.servers["coolify_4gb"]' <server-id>
   #
-  # prod = {
+  # prod_16gb = {
   #   name        = "dev-prod-16gb-nbg1"
-  #   server_type = "cx42"
+  #   server_type = "cx43"
   #   image       = "ubuntu-24.04"
   #   location    = "nbg1"
   #   ssh_keys    = ["coolifyy key"]
   #   backups     = false
   #   labels = {
   #     role        = "legacy-vps"
+  #     environment = "prod"
+  #   }
+  # }
+  #
+  # coolify_4gb = {
+  #   name        = "coolify-ubuntu-4gb-nbg1-1"
+  #   server_type = "cx23"
+  #   image       = "ubuntu-24.04"
+  #   location    = "nbg1"
+  #   ssh_keys    = ["coolifyy key"]
+  #   backups     = false
+  #   labels = {
+  #     role        = "edge-vps"
   #     environment = "prod"
   #   }
   # }

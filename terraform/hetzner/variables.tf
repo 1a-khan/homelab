@@ -5,8 +5,14 @@ variable "hcloud_token" {
 
 variable "lookup_server_name" {
   type        = string
-  description = "Optional existing Hetzner server name to inspect before importing."
+  description = "Deprecated single existing Hetzner server name to inspect before importing. Prefer lookup_server_names."
   default     = ""
+}
+
+variable "lookup_server_names" {
+  type        = list(string)
+  description = "Existing Hetzner server names to inspect before importing."
+  default     = []
 }
 
 variable "managed_servers" {

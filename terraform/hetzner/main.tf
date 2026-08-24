@@ -1,6 +1,16 @@
+locals {
+  lookup_server_names = toset(
+    distinct(
+      compact(
+        concat(var.lookup_server_names, [var.lookup_server_name])
+      )
+    )
+  )
+}
+
 data "hcloud_server" "lookup" {
-  count = var.lookup_server_name == "" ? 0 : 1
-  name  = var.lookup_server_name
+  for_each = local.lookup_server_names
+  name     = each.value
 }
 
 resource "hcloud_server" "servers" {

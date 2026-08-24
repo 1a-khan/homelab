@@ -129,7 +129,7 @@ if [[ "${mode}" == "server-types" ]]; then
           (.memory|tostring),
           (.disk|tostring),
           .storage_type,
-          (([.prices[]?.price_monthly.gross] | map(select(. != null)) | min) // "n/a")
+          (([.prices[]?.price_monthly.gross] | map(select(. != null) | tonumber) | min) // "n/a")
         ])
     | @tsv
   ' <<<"${server_types_json}" | column -t -s $'\t'
@@ -147,7 +147,7 @@ if [[ "${mode}" == "cheap" ]]; then
           cores,
           memory,
           disk,
-          monthly: (([.prices[]?.price_monthly.gross] | map(select(. != null)) | min) // null)
+          monthly: (([.prices[]?.price_monthly.gross] | map(select(. != null) | tonumber) | min) // null)
         }
       | select(.monthly != null)]
       | sort_by(.monthly)
@@ -287,7 +287,7 @@ jq -r '
         cores,
         memory,
         disk,
-        monthly: (([.prices[]?.price_monthly.gross] | map(select(. != null)) | min) // null)
+        monthly: (([.prices[]?.price_monthly.gross] | map(select(. != null) | tonumber) | min) // null)
       }
     | select(.monthly != null)]
     | sort_by(.monthly)

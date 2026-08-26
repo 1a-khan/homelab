@@ -70,6 +70,10 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "homelab" {
         service  = "http://traefik.kube-system.svc.cluster.local:80"
       },
       {
+        hostname = "penpot.${var.cloudflare_prod_zone_name}"
+        service  = "http://traefik.kube-system.svc.cluster.local:80"
+      },
+      {
         hostname = "kids-prep.${var.cloudflare_prod_zone_name}"
         service  = "http://traefik.kube-system.svc.cluster.local:80"
       },
@@ -254,6 +258,15 @@ resource "cloudflare_dns_record" "n8n_prod" {
 resource "cloudflare_dns_record" "windmill_prod" {
   zone_id = var.cloudflare_prod_zone_id
   name    = "windmill.${var.cloudflare_prod_zone_name}"
+  content = "${cloudflare_zero_trust_tunnel_cloudflared.homelab.id}.cfargotunnel.com"
+  type    = "CNAME"
+  ttl     = 1
+  proxied = true
+}
+
+resource "cloudflare_dns_record" "penpot_prod" {
+  zone_id = var.cloudflare_prod_zone_id
+  name    = "penpot.${var.cloudflare_prod_zone_name}"
   content = "${cloudflare_zero_trust_tunnel_cloudflared.homelab.id}.cfargotunnel.com"
   type    = "CNAME"
   ttl     = 1

@@ -114,7 +114,7 @@ cloudflare_account_id = "PASTE_ACCOUNT_ID_HERE"
 cloudflare_zone_id    = "PASTE_ZONE_ID_HERE"
 cloudflare_zone_name  = "miak-it.dev"
 hello_hostname        = "hello"
-access_allowed_email  = "ammadkhan@msn.com"
+access_allowed_email  = "operator@example.com"
 ```
 
 Do not commit `terraform.tfvars`.
@@ -138,7 +138,7 @@ https://hello.miak-it.dev
 with an allow policy for:
 
 ```text
-ammadkhan@msn.com
+operator@example.com
 ```
 
 The config also creates a One-time PIN identity provider and attaches it to the app, so users can log in by email code instead of Cloudflare account password.

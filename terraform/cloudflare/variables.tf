@@ -52,5 +52,4 @@ variable "hello_hostname" {
 variable "access_allowed_email" {
   type        = string
   description = "Email address allowed through Cloudflare Access for the test app."
-  default     = "ammadkhan@msn.com"
 }

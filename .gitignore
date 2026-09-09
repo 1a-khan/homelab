@@ -25,3 +25,51 @@ tools/bin/
 # Python generated files
 __pycache__/
 *.py[cod]
+
+# Environment overrides and credentials (keep sanitized examples)
+.env.*
+!.env.example
+!.env.*.example
+*.tfvars.json
+*.auto.tfvars.json
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+.kube/
+**/kubeconfig*
+*.kubeconfig
+
+# Machine-specific Ansible configuration
+ansible/*.ini
+!ansible/*.example.ini
+ansible/group_vars/*.yml
+!ansible/group_vars/*.example.yml
+ansible/host_vars/
+
+# Operational evidence may contain host details, logs and vulnerabilities
+security-reports/
+maintenance-reports/
+*.log
+*.sql
+*.sql.gz
+*.dump
+*.snapshot
+*.qcow2
+*.vmdk
+*.iso
+
+# Local credentials and private portfolio material
+.secrets/
+secrets/
+private/
+.vault-token
+.bao-token
+*.credentials.json
+
+# Editor and OS files
+.idea/
+.vscode/
+.DS_Store

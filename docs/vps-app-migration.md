@@ -204,7 +204,7 @@ Expected DNS change:
 
 ```text
 windmill.miak-it.com
-old: A 116.203.131.147
+old: A 203.0.113.10
 new: CNAME 50327130-69c0-4ff9-a8c2-d44d516dd17d.cfargotunnel.com
 ```
 
@@ -320,8 +320,8 @@ kubectl apply -f kubernetes/apps/miak-website/miak-website.yml
 kubectl apply -f kubernetes/apps/miak-website/ingress.yml
 
 kubectl get pods -n miak-website
-curl -H "Host: miak-it.de" http://192.168.8.140/healthz
-curl -H "Host: www.miak-it.de" http://192.168.8.140/healthz
+curl -H "Host: miak-it.de" http://192.168.1.50/healthz
+curl -H "Host: www.miak-it.de" http://192.168.1.50/healthz
 ```
 
 DNS cutover uses OpenTofu. The existing root A/AAAA records for `miak-it.de` must be replaced carefully because an apex CNAME cannot coexist with A/AAAA records.

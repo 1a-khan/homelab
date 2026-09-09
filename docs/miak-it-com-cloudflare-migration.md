@@ -20,7 +20,7 @@ ns1083.ui-dns.org
 ### Website / Root
 
 ```text
-miak-it.com A    217.160.0.95
+miak-it.com A    203.0.113.20
 miak-it.com AAAA 2001:8d8:100f:f000::200
 ```
 
@@ -36,10 +36,10 @@ _dmarc.miak-it.com TXT "v=DMARC1; p=none;"
 ### Known App Subdomains
 
 ```text
-n8n.miak-it.com      A 116.203.131.147
-windmill.miak-it.com A 116.203.131.147
-openbao.miak-it.com  A 116.203.131.147
-grafana.miak-it.com  A 116.203.131.147
+n8n.miak-it.com      A 203.0.113.10
+windmill.miak-it.com A 203.0.113.10
+openbao.miak-it.com  A 203.0.113.10
+grafana.miak-it.com  A 203.0.113.10
 ```
 
 ## Migration Steps
@@ -55,12 +55,12 @@ miak-it.com
 3. Before changing nameservers at IONOS, verify Cloudflare has at least these records:
 
 ```text
-A     miak-it.com        217.160.0.95
+A     miak-it.com        203.0.113.20
 AAAA  miak-it.com        2001:8d8:100f:f000::200
-A     n8n                116.203.131.147
-A     windmill           116.203.131.147
-A     openbao            116.203.131.147
-A     grafana            116.203.131.147
+A     n8n                203.0.113.10
+A     windmill           203.0.113.10
+A     openbao            203.0.113.10
+A     grafana            203.0.113.10
 MX    miak-it.com        mx00.ionos.de priority 10
 MX    miak-it.com        mx01.ionos.de priority 10
 TXT   miak-it.com        "v=spf1 include:_spf-eu.ionos.com ~all"

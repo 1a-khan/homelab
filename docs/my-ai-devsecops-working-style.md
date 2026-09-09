@@ -46,7 +46,7 @@ Available local infrastructure:
 - Homelab repo: `/home/dev/Desktop/local-svr/homelab`
 - Local kubeconfig for k3s: `/home/dev/Desktop/local-svr/homelab/kubeconfig`
 - k3s node: `msvr`
-- k3s LAN IP: `192.168.8.140`
+- k3s LAN IP: `192.168.1.50`
 - Kubernetes is single-node k3s on the mini PC.
 - OpenBao runs inside Kubernetes in namespace `openbao`.
 - OpenBao pod is usually `openbao-0`.

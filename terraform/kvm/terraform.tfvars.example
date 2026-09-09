@@ -1,0 +1,11 @@
+vm_name                = "security-master"
+vm_hostname            = "security-master"
+vm_vcpus               = 4
+vm_memory_mib          = 8192
+vm_disk_bytes          = 128849018880
+libvirt_pool           = "default"
+libvirt_network        = "default"
+admin_user             = "adm-master"
+security_agent_user    = "security-agent"
+ssh_public_key_path    = "~/.ssh/hetzner_admin_ed25519.pub"
+ubuntu_cloud_image_url = "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"

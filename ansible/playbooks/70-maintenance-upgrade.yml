@@ -1,0 +1,148 @@
+---
+- name: Preflight, upgrade, and postcheck local server
+  hosts: k3s_servers
+  become: true
+  vars:
+    maintenance_upgrade_apply: false
+    maintenance_reboot_if_required: false
+    maintenance_apt_upgrade: safe
+    maintenance_report_root: "{{ playbook_dir }}/../../maintenance-reports"
+    maintenance_report_id: "{{ inventory_hostname }}-{{ ansible_facts.date_time.iso8601_basic_short }}"
+    maintenance_remote_report_dir: "/var/tmp/homelab-maintenance-{{ maintenance_report_id }}"
+    maintenance_remote_archive: "/var/tmp/homelab-maintenance-{{ maintenance_report_id }}.tar.gz"
+    maintenance_precheck_commands:
+      - { name: "00-date", cmd: "date --iso-8601=seconds" }
+      - { name: "01-hostnamectl", cmd: "hostnamectl" }
+      - { name: "02-kernel", cmd: "uname -a" }
+      - { name: "03-uptime", cmd: "uptime" }
+      - { name: "04-memory", cmd: "free -h" }
+      - { name: "05-disk", cmd: "df -hT" }
+      - { name: "06-failed-services", cmd: "systemctl --failed --no-pager" }
+      - { name: "07-reboot-required", cmd: "if test -f /var/run/reboot-required; then cat /var/run/reboot-required; cat /var/run/reboot-required.pkgs 2>/dev/null; else echo no; fi" }
+      - { name: "08-upgradable-packages", cmd: "apt list --upgradable 2>/dev/null" }
+      - { name: "09-kernel-packages", cmd: "dpkg -l 'linux-image*' 'linux-modules*' 2>/dev/null | awk '/^ii/{print}'" }
+      - { name: "10-network-listeners", cmd: "ss -tulpn" }
+      - { name: "11-k3s-service", cmd: "systemctl status k3s --no-pager" }
+      - { name: "12-k3s-nodes", cmd: "kubectl get nodes -o wide" }
+      - { name: "13-k3s-pods", cmd: "kubectl get pods -A -o wide" }
+      - { name: "14-k3s-ingress", cmd: "kubectl get ingress -A" }
+      - { name: "15-k3s-pvc", cmd: "kubectl get pvc -A" }
+      - { name: "16-docker-containers", cmd: "docker ps --format 'table {{ '{{' }}.Names{{ '}}' }}\t{{ '{{' }}.Image{{ '}}' }}\t{{ '{{' }}.Status{{ '}}' }}\t{{ '{{' }}.Ports{{ '}}' }}' 2>/dev/null || true" }
+      - { name: "17-k3s-logs", cmd: "journalctl -u k3s -n 160 --no-pager" }
+    maintenance_postcheck_commands:
+      - { name: "50-date", cmd: "date --iso-8601=seconds" }
+      - { name: "51-kernel", cmd: "uname -a" }
+      - { name: "52-uptime", cmd: "uptime" }
+      - { name: "53-memory", cmd: "free -h" }
+      - { name: "54-disk", cmd: "df -hT" }
+      - { name: "55-failed-services", cmd: "systemctl --failed --no-pager" }
+      - { name: "56-reboot-required", cmd: "if test -f /var/run/reboot-required; then cat /var/run/reboot-required; cat /var/run/reboot-required.pkgs 2>/dev/null; else echo no; fi" }
+      - { name: "57-k3s-service", cmd: "systemctl status k3s --no-pager" }
+      - { name: "58-k3s-nodes", cmd: "kubectl get nodes -o wide" }
+      - { name: "59-k3s-pods", cmd: "kubectl get pods -A -o wide" }
+      - { name: "60-docker-containers", cmd: "docker ps --format 'table {{ '{{' }}.Names{{ '}}' }}\t{{ '{{' }}.Image{{ '}}' }}\t{{ '{{' }}.Status{{ '}}' }}\t{{ '{{' }}.Ports{{ '}}' }}' 2>/dev/null || true" }
+      - { name: "61-apt-history", cmd: "grep -h -A200 'Start-Date' /var/log/apt/history.log /var/log/apt/history.log.* 2>/dev/null | tail -n 240" }
+
+  tasks:
+    - name: Show maintenance mode
+      ansible.builtin.debug:
+        msg:
+          - "Report id: {{ maintenance_report_id }}"
+          - "Upgrade apply: {{ maintenance_upgrade_apply | bool }}"
+          - "Reboot if required: {{ maintenance_reboot_if_required | bool }}"
+          - "APT upgrade mode: {{ maintenance_apt_upgrade }}"
+
+    - name: Create remote report directories
+      ansible.builtin.file:
+        path: "{{ maintenance_remote_report_dir }}/{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0750"
+      loop:
+        - pre
+        - post
+
+    - name: Capture preflight status
+      ansible.builtin.shell: |
+        set +e
+        {{ item.cmd }} > "{{ maintenance_remote_report_dir }}/pre/{{ item.name }}.txt" 2>&1
+      args:
+        executable: /bin/bash
+      changed_when: false
+      failed_when: false
+      loop: "{{ maintenance_precheck_commands }}"
+
+    - name: Stop before changes when running in report-only mode
+      ansible.builtin.debug:
+        msg: "Report-only mode complete. Pass -e maintenance_upgrade_apply=true to run apt upgrade."
+      when: not (maintenance_upgrade_apply | bool)
+
+    - name: Refresh apt package cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+      when: maintenance_upgrade_apply | bool
+
+    - name: Apply package upgrade
+      ansible.builtin.apt:
+        upgrade: "{{ maintenance_apt_upgrade }}"
+      when: maintenance_upgrade_apply | bool
+
+    - name: Check whether reboot is required
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: maintenance_reboot_required
+
+    - name: Reboot after upgrade when explicitly allowed and required
+      ansible.builtin.reboot:
+        msg: "Homelab maintenance reboot after package upgrades"
+        reboot_timeout: 900
+        post_reboot_delay: 30
+      when:
+        - maintenance_upgrade_apply | bool
+        - maintenance_reboot_if_required | bool
+        - maintenance_reboot_required.stat.exists
+
+    - name: Capture postcheck status
+      ansible.builtin.shell: |
+        set +e
+        {{ item.cmd }} > "{{ maintenance_remote_report_dir }}/post/{{ item.name }}.txt" 2>&1
+      args:
+        executable: /bin/bash
+      changed_when: false
+      failed_when: false
+      loop: "{{ maintenance_postcheck_commands }}"
+
+    - name: Create remote report archive
+      ansible.builtin.archive:
+        path: "{{ maintenance_remote_report_dir }}"
+        dest: "{{ maintenance_remote_archive }}"
+        format: gz
+        mode: "0640"
+
+    - name: Ensure local report directory exists
+      ansible.builtin.file:
+        path: "{{ maintenance_report_root }}"
+        state: directory
+        mode: "0755"
+      delegate_to: localhost
+      become: false
+
+    - name: Fetch maintenance report archive
+      ansible.builtin.fetch:
+        src: "{{ maintenance_remote_archive }}"
+        dest: "{{ maintenance_report_root }}/{{ maintenance_report_id }}.tar.gz"
+        flat: true
+
+    - name: Unpack local maintenance report
+      ansible.builtin.unarchive:
+        src: "{{ maintenance_report_root }}/{{ maintenance_report_id }}.tar.gz"
+        dest: "{{ maintenance_report_root }}"
+        remote_src: false
+      delegate_to: localhost
+      become: false
+
+    - name: Show local report path
+      ansible.builtin.debug:
+        msg: "Maintenance report saved under {{ maintenance_report_root }}/homelab-maintenance-{{ maintenance_report_id }}"

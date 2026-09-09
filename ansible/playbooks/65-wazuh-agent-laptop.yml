@@ -1,0 +1,78 @@
+---
+- name: Install Wazuh agent on this laptop
+  hosts: laptop
+  connection: local
+  become: true
+  vars:
+    wazuh_manager_address: "192.168.8.140"
+    wazuh_agent_name: "dev-laptop"
+
+  handlers:
+    - name: Restart wazuh-agent
+      ansible.builtin.service:
+        name: wazuh-agent
+        state: restarted
+
+  tasks:
+    - name: Install Wazuh agent prerequisites
+      ansible.builtin.apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+        state: present
+        update_cache: true
+
+    - name: Add Wazuh package signing key
+      ansible.builtin.shell:
+        cmd: |
+          set -euo pipefail
+          curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH |
+            gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/wazuh.gpg --import
+          chmod 644 /usr/share/keyrings/wazuh.gpg
+        executable: /bin/bash
+        creates: /usr/share/keyrings/wazuh.gpg
+
+    - name: Add Wazuh APT repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/wazuh.gpg] https://packages.wazuh.com/4.x/apt/ stable main"
+        filename: wazuh
+        state: present
+
+    - name: Install Wazuh agent and enroll with manager
+      ansible.builtin.apt:
+        name: wazuh-agent
+        state: present
+        update_cache: true
+      environment:
+        WAZUH_MANAGER: "{{ wazuh_manager_address }}"
+        WAZUH_AGENT_NAME: "{{ wazuh_agent_name }}"
+
+    - name: Configure Wazuh manager address
+      ansible.builtin.replace:
+        path: /var/ossec/etc/ossec.conf
+        regexp: '<address>.*</address>'
+        replace: '<address>{{ wazuh_manager_address }}</address>'
+      notify: Restart wazuh-agent
+
+    - name: Pin Wazuh agent package to avoid accidental version drift
+      ansible.builtin.dpkg_selections:
+        name: wazuh-agent
+        selection: hold
+
+    - name: Enable and start Wazuh agent
+      ansible.builtin.service:
+        name: wazuh-agent
+        enabled: true
+        state: started
+
+    - name: Show local Wazuh agent status
+      ansible.builtin.command: systemctl status wazuh-agent --no-pager
+      changed_when: false
+      failed_when: false
+      register: wazuh_agent_status
+
+    - name: Print Wazuh agent status
+      ansible.builtin.debug:
+        var: wazuh_agent_status.stdout_lines

@@ -3,7 +3,7 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 output_file="${1:-${repo_root}/ansible/hetzner-staging.ini}"
-ssh_key="${HETZNER_ANSIBLE_SSH_KEY:-~/.ssh/homelab}"
+ssh_key="${HETZNER_ANSIBLE_SSH_KEY:-~/.ssh/hetzner_admin_ed25519}"
 
 mkdir -p "$(dirname "${output_file}")"
 

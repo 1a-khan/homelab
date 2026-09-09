@@ -1,0 +1,180 @@
+---
+- name: Deploy Wazuh manager and local agent
+  hosts: k3s_servers
+  become: true
+  vars_files:
+    - ../group_vars/all.yml
+
+  handlers:
+    - name: Restart wazuh-agent
+      ansible.builtin.service:
+        name: wazuh-agent
+        state: restarted
+
+  tasks:
+    - name: Install Docker and Wazuh prerequisites
+      ansible.builtin.apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - docker.io
+          - docker-compose-v2
+          - git
+          - gnupg
+        state: present
+        update_cache: true
+
+    - name: Ensure Docker is running
+      ansible.builtin.service:
+        name: docker
+        enabled: true
+        state: started
+
+    - name: Add admin user to Docker group
+      ansible.builtin.user:
+        name: "{{ admin_user }}"
+        groups: docker
+        append: true
+
+    - name: Set vm.max_map_count for Wazuh indexer
+      ansible.posix.sysctl:
+        name: vm.max_map_count
+        value: "262144"
+        state: present
+        reload: true
+
+    - name: Set inotify limits for Wazuh manager modules
+      ansible.posix.sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        state: present
+        reload: true
+      loop:
+        - { name: fs.inotify.max_user_watches, value: "524288" }
+        - { name: fs.inotify.max_user_instances, value: "1024" }
+        - { name: fs.inotify.max_queued_events, value: "32768" }
+
+    - name: Clone Wazuh Docker repository
+      ansible.builtin.git:
+        repo: https://github.com/wazuh/wazuh-docker.git
+        dest: "{{ wazuh_install_dir }}"
+        version: "v{{ wazuh_version }}"
+        update: false
+
+    - name: Check generated Wazuh certificates
+      ansible.builtin.stat:
+        path: "{{ wazuh_install_dir }}/single-node/config/wazuh_indexer_ssl_certs/root-ca.pem"
+      register: wazuh_root_ca
+
+    - name: Generate Wazuh self-signed certificates
+      ansible.builtin.command:
+        cmd: docker compose -f generate-indexer-certs.yml run --rm generator
+        chdir: "{{ wazuh_install_dir }}/single-node"
+      when: not wazuh_root_ca.stat.exists
+      changed_when: true
+
+    - name: Bind Wazuh manager ports to the LAN address
+      ansible.builtin.replace:
+        path: "{{ wazuh_install_dir }}/single-node/docker-compose.yml"
+        regexp: '^\s+- "({{ item.port }}:{{ item.target }}.*?)"\s*$'
+        replace: '      - "{{ wazuh_bind_address }}:{{ item.port }}:{{ item.target }}"'
+      loop:
+        - { port: "1514", target: "1514" }
+        - { port: "1515", target: "1515" }
+        - { port: "514", target: "514/udp" }
+        - { port: "55000", target: "55000" }
+
+    - name: Bind Wazuh indexer to localhost only
+      ansible.builtin.replace:
+        path: "{{ wazuh_install_dir }}/single-node/docker-compose.yml"
+        regexp: '^\s+- "9200:9200"\s*$'
+        replace: '      - "127.0.0.1:9200:9200"'
+
+    - name: Bind Wazuh dashboard to the LAN address
+      ansible.builtin.replace:
+        path: "{{ wazuh_install_dir }}/single-node/docker-compose.yml"
+        regexp: '^\s+- "({{ wazuh_bind_address }}:)?[0-9]+:5601"\s*$|^\s+- [0-9]+:5601\s*$'
+        replace: '      - "{{ wazuh_bind_address }}:{{ wazuh_dashboard_port }}:5601"'
+
+    - name: Start Wazuh single-node stack
+      community.docker.docker_compose_v2:
+        project_src: "{{ wazuh_install_dir }}/single-node"
+        state: present
+
+    - name: Allow Wazuh dashboard from trusted networks
+      community.general.ufw:
+        rule: allow
+        port: "{{ wazuh_dashboard_port }}"
+        proto: tcp
+        from_ip: "{{ item }}"
+      loop: "{{ wazuh_allowed_cidrs }}"
+
+    - name: Remove old Wazuh dashboard port rule
+      community.general.ufw:
+        rule: allow
+        port: "8443"
+        proto: tcp
+        from_ip: "{{ item }}"
+        delete: true
+      loop: "{{ wazuh_allowed_cidrs }}"
+      when: wazuh_dashboard_port != "8443"
+
+    - name: Allow Wazuh agent events from trusted networks
+      community.general.ufw:
+        rule: allow
+        port: "1514"
+        proto: tcp
+        from_ip: "{{ item }}"
+      loop: "{{ wazuh_allowed_cidrs }}"
+
+    - name: Allow Wazuh agent enrollment from trusted networks
+      community.general.ufw:
+        rule: allow
+        port: "1515"
+        proto: tcp
+        from_ip: "{{ item }}"
+      loop: "{{ wazuh_allowed_cidrs }}"
+
+    - name: Add Wazuh package signing key
+      ansible.builtin.shell:
+        cmd: |
+          set -euo pipefail
+          curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH |
+            gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/wazuh.gpg --import
+          chmod 644 /usr/share/keyrings/wazuh.gpg
+        executable: /bin/bash
+        creates: /usr/share/keyrings/wazuh.gpg
+
+    - name: Add Wazuh APT repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/wazuh.gpg] https://packages.wazuh.com/4.x/apt/ stable main"
+        filename: wazuh
+        state: present
+
+    - name: Install Wazuh agent for local-svr
+      ansible.builtin.apt:
+        name: wazuh-agent
+        state: present
+        update_cache: true
+      environment:
+        WAZUH_MANAGER: "{{ wazuh_manager_address }}"
+        WAZUH_AGENT_NAME: "{{ wazuh_agent_name }}"
+
+    - name: Configure Wazuh local agent manager address
+      ansible.builtin.replace:
+        path: /var/ossec/etc/ossec.conf
+        regexp: '<address>.*</address>'
+        replace: '<address>{{ wazuh_manager_address }}</address>'
+      notify: Restart wazuh-agent
+
+    - name: Pin Wazuh agent package to avoid accidental manager/agent drift
+      ansible.builtin.dpkg_selections:
+        name: wazuh-agent
+        selection: hold
+
+    - name: Enable and start Wazuh agent
+      ansible.builtin.service:
+        name: wazuh-agent
+        enabled: true
+        state: started

@@ -22,7 +22,6 @@ variable "managed_servers" {
     server_type             = string
     image                   = string
     location                = optional(string)
-    datacenter              = optional(string)
     ssh_keys                = optional(list(string), [])
     backups                 = optional(bool, false)
     labels                  = optional(map(string), {})
@@ -65,7 +64,7 @@ variable "create_staging_firewall" {
 variable "staging_firewall_name" {
   type        = string
   description = "Name for the shared staging firewall."
-  default     = "miak-staging-default"
+  default     = "master-cx33-nbg1-default"
 }
 
 variable "staging_allowed_ssh_cidrs" {
@@ -84,4 +83,52 @@ variable "staging_allowed_web_cidrs" {
   type        = list(string)
   description = "CIDRs allowed to reach HTTP/HTTPS on staging servers."
   default     = ["0.0.0.0/0", "::/0"]
+}
+
+variable "staging_allowed_kuma_cidrs" {
+  type        = list(string)
+  description = "CIDRs allowed to reach Uptime Kuma directly on port 3001."
+  default     = ["0.0.0.0/0", "::/0"]
+}
+
+variable "staging_allowed_wireguard_cidrs" {
+  type        = list(string)
+  description = "CIDRs allowed to reach WireGuard."
+  default     = ["0.0.0.0/0", "::/0"]
+}
+
+variable "staging_allowed_icmp_cidrs" {
+  type        = list(string)
+  description = "CIDRs allowed to ping the server."
+  default     = ["0.0.0.0/0", "::/0"]
+}
+
+variable "create_private_network" {
+  type        = bool
+  description = "Create a Hetzner private network for new servers and attach staging servers to it."
+  default     = true
+}
+
+variable "private_network_name" {
+  type        = string
+  description = "Name of the Hetzner private network for new servers."
+  default     = "miak-private-eu-central"
+}
+
+variable "private_network_ip_range" {
+  type        = string
+  description = "Overall CIDR for the Hetzner private network."
+  default     = "10.44.0.0/16"
+}
+
+variable "private_network_subnet_ip_range" {
+  type        = string
+  description = "Cloud subnet CIDR for new Hetzner servers."
+  default     = "10.44.0.0/24"
+}
+
+variable "private_network_zone" {
+  type        = string
+  description = "Hetzner network zone for Germany/Finland cloud locations."
+  default     = "eu-central"
 }

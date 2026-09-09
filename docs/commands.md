@@ -562,3 +562,42 @@ metadata:
   annotations:
     secret.reloader.stakater.com/reload: "graph-mail-mover"
 ```
+
+## 23. Safe Server Maintenance
+
+Run a report-only maintenance preflight first. This does not install upgrades or reboot:
+
+```bash
+cd /home/dev/Desktop/local-svr/homelab/ansible
+ansible-playbook playbooks/70-maintenance-upgrade.yml
+```
+
+The playbook saves a timestamped report under:
+
+```text
+maintenance-reports/
+```
+
+Run package upgrades only after reviewing the preflight output:
+
+```bash
+cd /home/dev/Desktop/local-svr/homelab/ansible
+ansible-playbook playbooks/70-maintenance-upgrade.yml -e maintenance_upgrade_apply=true
+```
+
+Allow a reboot only during a maintenance window:
+
+```bash
+cd /home/dev/Desktop/local-svr/homelab/ansible
+ansible-playbook playbooks/70-maintenance-upgrade.yml \
+  -e maintenance_upgrade_apply=true \
+  -e maintenance_reboot_if_required=true
+```
+
+Use `maintenance_apt_upgrade=full` only when you intentionally want package removals/installations handled by apt:
+
+```bash
+ansible-playbook playbooks/70-maintenance-upgrade.yml \
+  -e maintenance_upgrade_apply=true \
+  -e maintenance_apt_upgrade=full
+```

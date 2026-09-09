@@ -1,0 +1,18 @@
+operator:
+  builtInTrivyServer: false
+  scanJobsConcurrentLimit: 1
+  scanJobTimeout: 10m
+
+trivy:
+  ignoreUnfixed: true
+  severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+  resources:
+    requests:
+      cpu: 50m
+      memory: 100M
+    limits:
+      cpu: 250m
+      memory: 500M
+
+serviceMonitor:
+  enabled: true

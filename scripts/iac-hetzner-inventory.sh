@@ -20,18 +20,19 @@ trap cleanup EXIT
 
 usage() {
   cat <<'USAGE'
-Usage: scripts/iac-hetzner-inventory.sh [summary|raw|server-types|cheap]
+Usage: scripts/iac-hetzner-inventory.sh [summary|raw|server-types|cheap|candidates]
 
 Modes:
   summary       Human-readable inventory of current project resources.
   raw           Raw JSON for important resource lists.
   server-types  Server type catalog with disk, CPU, RAM, architecture.
   cheap         Cheapest x86 server types by monthly gross price when pricing is available.
+  candidates    Good x86 candidates around 4-8 cores and 8-16 GB RAM.
 USAGE
 }
 
 case "${mode}" in
-  summary|raw|server-types|cheap) ;;
+  summary|raw|server-types|cheap|candidates) ;;
   -h|--help|help)
     usage
     exit 0
@@ -172,18 +173,66 @@ if [[ "${mode}" == "cheap" ]]; then
   exit 0
 fi
 
+if [[ "${mode}" == "candidates" ]]; then
+  jq -r '
+    def price_for($loc):
+      ([.prices[]? | select(.location == $loc) | .price_monthly.gross | tonumber] | min) // null;
+    def germany_locations:
+      ([.prices[]?.location | select(. == "nbg1" or . == "fsn1" or . == "hel1")] | unique | join(","));
+    def monthly_min:
+      ([.prices[]? | select(.location == "nbg1" or .location == "fsn1" or .location == "hel1") | .price_monthly.gross | tonumber] | min);
+
+    ["name","arch","cores","memory_gb","disk_gb","nbg1","fsn1","hel1","monthly_gross_from","germany_locations"],
+    ([.server_types[]
+      | select(.architecture == "x86")
+      | select(.cores >= 4 and .cores <= 8 and .memory >= 8 and .memory <= 16)
+      | {
+          name,
+          architecture,
+          cores,
+          memory,
+          disk,
+          nbg1: price_for("nbg1"),
+          fsn1: price_for("fsn1"),
+          hel1: price_for("hel1"),
+          monthly: monthly_min,
+          germany_locations: germany_locations
+        }
+      | select(.monthly != null)]
+      | sort_by(.memory, .cores, .monthly)
+      | .[]
+      | [
+          .name,
+          .architecture,
+          (.cores|tostring),
+          (.memory|tostring),
+          (.disk|tostring),
+          ((.nbg1 // "-")|tostring),
+          ((.fsn1 // "-")|tostring),
+          ((.hel1 // "-")|tostring),
+          (.monthly|tostring),
+          .germany_locations
+        ])
+    | @tsv
+  ' <<<"${server_types_json}" | column -t -s $'\t'
+  exit 0
+fi
+
 echo "== Servers =="
 jq -r '
   if (.servers | length) == 0 then
     "none"
   else
-    ["name","id","status","type","image","datacenter","ipv4","ipv6","labels"],
+    ["name","id","status","type","cores","memory_gb","disk_gb","image","datacenter","ipv4","ipv6","labels"],
     (.servers[]
       | [
           .name,
           (.id|tostring),
           .status,
           .server_type.name,
+          (.server_type.cores|tostring),
+          (.server_type.memory|tostring),
+          (.server_type.disk|tostring),
           .image.name,
           .datacenter.name,
           (.public_net.ipv4.ip // "-"),
@@ -193,6 +242,23 @@ jq -r '
     | @tsv
   end
 ' <<<"${servers_json}" | column -t -s $'\t'
+
+echo
+echo "== Server Totals =="
+jq -r '
+  if (.servers | length) == 0 then
+    "servers: 0\ncores: 0\nmemory_gb: 0\ndisk_gb: 0"
+  else
+    {
+      servers: (.servers | length),
+      cores: ([.servers[].server_type.cores] | add),
+      memory_gb: ([.servers[].server_type.memory] | add),
+      disk_gb: ([.servers[].server_type.disk] | add)
+    }
+    | to_entries[]
+    | "\(.key): \(.value)"
+  end
+' <<<"${servers_json}"
 
 echo
 echo "== Networks =="

@@ -1,0 +1,132 @@
+---
+- name: Bootstrap local security VM
+  hosts: security_vm
+  become: true
+
+  handlers:
+    - name: Restart ssh
+      ansible.builtin.service:
+        name: ssh
+        state: restarted
+
+    - name: Restart fail2ban
+      ansible.builtin.service:
+        name: fail2ban
+        state: restarted
+
+  tasks:
+    - name: Set timezone
+      community.general.timezone:
+        name: "{{ security_vm_timezone | default('Europe/Berlin') }}"
+
+    - name: Install baseline packages
+      ansible.builtin.apt:
+        name:
+          - apt-transport-https
+          - auditd
+          - ca-certificates
+          - curl
+          - fail2ban
+          - git
+          - gnupg
+          - htop
+          - jq
+          - net-tools
+          - qemu-guest-agent
+          - restic
+          - rclone
+          - unattended-upgrades
+          - ufw
+          - vim
+        state: present
+        update_cache: true
+
+    - name: Install Docker packages
+      ansible.builtin.apt:
+        name:
+          - docker.io
+          - docker-compose-v2
+        state: present
+      when: security_vm_install_docker | default(true) | bool
+
+    - name: Add admin user to Docker group
+      ansible.builtin.user:
+        name: "{{ security_vm_admin_user | default('adm-master') }}"
+        groups: docker
+        append: true
+      when: security_vm_install_docker | default(true) | bool
+
+    - name: Ensure security agent has no sudo access
+      ansible.builtin.file:
+        path: "/etc/sudoers.d/90-{{ security_vm_agent_user | default('security-agent') }}"
+        state: absent
+
+    - name: Harden SSH daemon
+      ansible.builtin.copy:
+        dest: /etc/ssh/sshd_config.d/99-security-vm-hardening.conf
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          PermitRootLogin no
+          PasswordAuthentication no
+          PubkeyAuthentication yes
+          KbdInteractiveAuthentication no
+          X11Forwarding no
+          AllowUsers {{ security_vm_admin_user | default('adm-master') }} {{ security_vm_agent_user | default('security-agent') }}
+      notify: Restart ssh
+
+    - name: Validate SSH daemon configuration
+      ansible.builtin.command: sshd -t
+      changed_when: false
+
+    - name: Configure fail2ban sshd jail
+      ansible.builtin.copy:
+        dest: /etc/fail2ban/jail.d/sshd.local
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          [sshd]
+          enabled = true
+          maxretry = 5
+          findtime = 10m
+          bantime = 1h
+      notify: Restart fail2ban
+
+    - name: Configure UFW defaults
+      community.general.ufw:
+        direction: "{{ item.direction }}"
+        policy: "{{ item.policy }}"
+      loop:
+        - { direction: incoming, policy: deny }
+        - { direction: outgoing, policy: allow }
+
+    - name: Allow SSH from LAN/private ranges
+      community.general.ufw:
+        rule: allow
+        port: "22"
+        proto: tcp
+        from_ip: "{{ item }}"
+      loop: "{{ security_vm_allowed_lan_cidrs | default(['192.168.0.0/16']) }}"
+
+    - name: Enable UFW
+      community.general.ufw:
+        state: enabled
+
+    - name: Enable unattended upgrades
+      ansible.builtin.copy:
+        dest: /etc/apt/apt.conf.d/20auto-upgrades
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          APT::Periodic::Update-Package-Lists "1";
+          APT::Periodic::Unattended-Upgrade "1";
+
+    - name: Enable useful services
+      ansible.builtin.service:
+        name: "{{ item }}"
+        enabled: true
+        state: started
+      loop: "{{ ['qemu-guest-agent', 'fail2ban'] + (['docker'] if security_vm_install_docker | default(true) | bool else []) }}"

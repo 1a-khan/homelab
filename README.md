@@ -6,14 +6,14 @@ I run a single-node k3s Kubernetes platform on a mini PC behind an LTE router, w
 
 ## What I work on here
 
-- **Infrastructure as code:** Terraform-compatible configuration, operated with OpenTofu, for Cloudflare and Hetzner.
+- **Infrastructure as code:** Terraform-compatible configuration, operated with OpenTofu, for Cloudflare, Hetzner, and local KVM virtual machines.
 - **Configuration management:** Ansible for server bootstrap, package installation, and k3s setup.
 - **GitOps:** Helm and Argo CD for Kubernetes applications and deployment configuration stored in Git.
 - **Secrets management:** OpenBao and External Secrets Operator to supply application credentials without committing their values.
 - **Observability:** Prometheus and Grafana for metrics and dashboards, with Loki and Alloy for logs.
 - **Recovery:** Backup and restore scripts for applications and OpenBao, with supporting migration runbooks.
 
-My wider lab workflow also includes CI/CD security scanning and Wazuh for host security monitoring and vulnerability reporting. Those capabilities are part of my practical experience; this repository does not contain every pipeline or every component of the running environment.
+I also use Wazuh for host security monitoring and vulnerability reporting, Trivy for repository and Kubernetes workload scanning, and Renovate configuration for dependency updates. The playbooks and helper scripts for these are included here. My wider workflow includes CI/CD security scanning; this repository does not contain every pipeline or every component of the running environment.
 
 ## How I manage the work
 
@@ -46,6 +46,9 @@ Useful starting points:
 - [External Secrets and OpenBao](docs/external-secrets-openbao.md)
 - [Monitoring](docs/monitoring.md) and [logging](docs/logging.md)
 - [Application migration and recovery](docs/vps-app-migration.md)
+- [Security monitoring and vulnerability reports](docs/security-monitoring.md)
+- [Local security VM](docs/security-vm.md)
+- [Operational commands and maintenance](docs/commands.md)
 
 ## Using this repository
 

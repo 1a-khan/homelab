@@ -75,6 +75,20 @@
         key: "{{ vps_admin_ssh_public_key }}"
         state: present
 
+    - name: Ensure security agent user exists
+      ansible.builtin.user:
+        name: "{{ vps_security_agent_user | default('security-agent') }}"
+        shell: /bin/bash
+        create_home: true
+      when: vps_security_agent_user is defined
+
+    - name: Install security agent SSH key
+      ansible.posix.authorized_key:
+        user: "{{ vps_security_agent_user | default('security-agent') }}"
+        key: "{{ vps_security_agent_ssh_public_key | default(vps_admin_ssh_public_key) }}"
+        state: present
+      when: vps_security_agent_user is defined
+
     - name: Allow passwordless sudo for admin user
       ansible.builtin.copy:
         dest: "/etc/sudoers.d/90-{{ vps_admin_user | default('dev_prod') }}"
@@ -96,7 +110,7 @@
           PubkeyAuthentication yes
           KbdInteractiveAuthentication no
           X11Forwarding no
-          AllowUsers {{ vps_admin_user | default('dev_prod') }}
+          AllowUsers {{ vps_admin_user | default('dev_prod') }}{% if vps_security_agent_user is defined %} {{ vps_security_agent_user }}{% endif %}
       notify: Restart ssh
 
     - name: Validate SSH daemon configuration

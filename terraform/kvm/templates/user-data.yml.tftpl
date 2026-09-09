@@ -1,0 +1,31 @@
+#cloud-config
+hostname: ${hostname}
+manage_etc_hosts: true
+timezone: Europe/Berlin
+
+users:
+  - default
+  - name: ${admin_user}
+    gecos: Admin Master
+    shell: /bin/bash
+    groups: [adm, sudo]
+    sudo: "ALL=(ALL) NOPASSWD:ALL"
+    lock_passwd: true
+    ssh_authorized_keys:
+      - ${ssh_public_key}
+  - name: ${security_agent_user}
+    gecos: Security Agent
+    shell: /bin/bash
+    lock_passwd: true
+    ssh_authorized_keys:
+      - ${ssh_public_key}
+
+ssh_pwauth: false
+disable_root: true
+package_update: true
+packages:
+  - qemu-guest-agent
+  - python3
+
+runcmd:
+  - systemctl enable --now qemu-guest-agent

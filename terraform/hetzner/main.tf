@@ -7,10 +7,10 @@ locals {
     )
   )
 
-  staging_firewall_ids = var.create_staging_firewall && length(var.staging_servers) > 0 ? [hcloud_firewall.staging_default[0].id] : []
+  staging_firewall_ids = var.create_staging_firewall && length(var.staging_servers) > 0 ? [hcloud_firewall.master_default[0].id] : []
   staging_network_servers = {
     for key, server in var.staging_servers : key => server
-    if server.network_id != null
+    if server.network_id != null || var.create_private_network
   }
 }
 
@@ -26,7 +26,6 @@ resource "hcloud_server" "servers" {
   server_type  = each.value.server_type
   image        = each.value.image
   location     = each.value.location
-  datacenter   = each.value.datacenter
   ssh_keys     = each.value.ssh_keys
   backups      = each.value.backups
   labels       = merge(each.value.labels, { managed_by = "opentofu" })
@@ -46,13 +45,35 @@ resource "hcloud_server" "servers" {
   }
 }
 
-resource "hcloud_firewall" "staging_default" {
+resource "hcloud_network" "private" {
+  count = var.create_private_network ? 1 : 0
+
+  name     = var.private_network_name
+  ip_range = var.private_network_ip_range
+
+  labels = {
+    managed_by = "opentofu"
+    role       = "private-network"
+  }
+}
+
+resource "hcloud_network_subnet" "private" {
+  count = var.create_private_network ? 1 : 0
+
+  network_id   = hcloud_network.private[0].id
+  type         = "cloud"
+  network_zone = var.private_network_zone
+  ip_range     = var.private_network_subnet_ip_range
+}
+
+resource "hcloud_firewall" "master_default" {
   count = var.create_staging_firewall && length(var.staging_servers) > 0 ? 1 : 0
 
   name = var.staging_firewall_name
   labels = {
     managed_by  = "opentofu"
-    environment = "staging"
+    environment = "prod"
+    role        = "master"
   }
 
   rule {
@@ -80,6 +101,26 @@ resource "hcloud_firewall" "staging_default" {
       port       = "443"
       source_ips = var.staging_allowed_web_cidrs
     }
+  }
+
+  rule {
+    direction  = "in"
+    protocol   = "tcp"
+    port       = "3001"
+    source_ips = var.staging_allowed_kuma_cidrs
+  }
+
+  rule {
+    direction  = "in"
+    protocol   = "udp"
+    port       = "51820"
+    source_ips = var.staging_allowed_wireguard_cidrs
+  }
+
+  rule {
+    direction  = "in"
+    protocol   = "icmp"
+    source_ips = var.staging_allowed_icmp_cidrs
   }
 }
 
@@ -109,6 +150,10 @@ resource "hcloud_server_network" "staging" {
   for_each = local.staging_network_servers
 
   server_id  = hcloud_server.staging[each.key].id
-  network_id = each.value.network_id
+  network_id = coalesce(each.value.network_id, try(hcloud_network.private[0].id, null))
   ip         = each.value.network_ip
+
+  depends_on = [
+    hcloud_network_subnet.private,
+  ]
 }

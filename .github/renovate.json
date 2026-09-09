@@ -1,0 +1,38 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "labels": [
+    "dependencies"
+  ],
+  "timezone": "Europe/Berlin",
+  "schedule": [
+    "before 6am on monday"
+  ],
+  "kubernetes": {
+    "managerFilePatterns": [
+      "/(^|/)kubernetes/.+\\.ya?ml$/"
+    ]
+  },
+  "helm-values": {
+    "managerFilePatterns": [
+      "/(^|/)kubernetes/.+-values\\.ya?ml$/"
+    ]
+  },
+  "terraform": {
+    "managerFilePatterns": [
+      "/(^|/)terraform/.+\\.tf$/"
+    ]
+  },
+  "packageRules": [
+    {
+      "matchManagers": [
+        "kubernetes",
+        "helm-values",
+        "terraform"
+      ],
+      "groupName": "homelab infrastructure dependencies"
+    }
+  ]
+}

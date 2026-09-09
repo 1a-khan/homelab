@@ -7,6 +7,7 @@ spec:
   description: Homelab k3s GitOps workloads
   sourceRepos:
     - git@github.com:1a-khan/homelab.git
+    - https://aquasecurity.github.io/helm-charts/
   destinations:
     - namespace: '*'
       server: https://kubernetes.default.svc

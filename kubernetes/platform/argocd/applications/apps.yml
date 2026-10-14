@@ -49,6 +49,30 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
+  name: keycloak
+  namespace: argocd
+spec:
+  project: homelab
+  source:
+    repoURL: git@github.com:1a-khan/homelab.git
+    targetRevision: main
+    path: kubernetes/apps/keycloak
+    directory:
+      include: '{namespace.yml,external-secret.yml,realm-flowloom.yml,keycloak.yml,ingress.yml}'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: keycloak
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
   name: miak-website
   namespace: argocd
 spec:

@@ -78,6 +78,10 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "homelab" {
         service  = "http://traefik.kube-system.svc.cluster.local:80"
       },
       {
+        hostname = "auth.${var.cloudflare_prod_zone_name}"
+        service  = "http://traefik.kube-system.svc.cluster.local:80"
+      },
+      {
         hostname = var.cloudflare_de_zone_name
         service  = "http://traefik.kube-system.svc.cluster.local:80"
       },
@@ -276,6 +280,16 @@ resource "cloudflare_dns_record" "penpot_prod" {
 resource "cloudflare_dns_record" "kids_prep_prod" {
   zone_id = var.cloudflare_prod_zone_id
   name    = "kids-prep.${var.cloudflare_prod_zone_name}"
+  content = "${cloudflare_zero_trust_tunnel_cloudflared.homelab.id}.cfargotunnel.com"
+  type    = "CNAME"
+  ttl     = 1
+  proxied = true
+}
+
+# Keycloak (identity provider for Flowloom Studio), kubernetes/apps/keycloak.
+resource "cloudflare_dns_record" "auth_prod" {
+  zone_id = var.cloudflare_prod_zone_id
+  name    = "auth.${var.cloudflare_prod_zone_name}"
   content = "${cloudflare_zero_trust_tunnel_cloudflared.homelab.id}.cfargotunnel.com"
   type    = "CNAME"
   ttl     = 1

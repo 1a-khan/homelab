@@ -44,13 +44,28 @@ envs=(dev staging prod)
 
 kc_pod="$(kubectl --kubeconfig "${kubeconfig}" -n keycloak get pod -l app.kubernetes.io/name=keycloak -o jsonpath='{.items[0].metadata.name}')"
 
-# kcadm inside the Keycloak pod, logged in as the bootstrap admin from the
-# pod's own environment: the admin password never leaves the pod.
+# Administrative credentials live in OpenBao, never in the Keycloak pod env.
+source "${repo_root}/scripts/lib/openbao-login.sh"
+openbao_login_admin
+
+bao() {
+  kubectl --kubeconfig "${kubeconfig}" -n "${namespace}" exec -i "${pod}" -- env "BAO_TOKEN=${BAO_TOKEN}" "$@"
+}
+admin_username="$(bao bao kv get -field=KC_ADMIN_USERNAME apps/keycloak-admin)"
+admin_password="$(bao bao kv get -field=KC_ADMIN_PASSWORD apps/keycloak-admin)"
+
 kc() {
-  kubectl --kubeconfig "${kubeconfig}" -n keycloak exec -i "${kc_pod}" -- sh -c '
-    /opt/keycloak/bin/kcadm.sh config credentials --config /tmp/kcadm.config --server http://localhost:8080 \
-      --realm master --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD" >/dev/null 2>&1 &&
-    exec /opt/keycloak/bin/kcadm.sh "$@" --config /tmp/kcadm.config' kcadm "$@"
+  printf '%s\n%s\n' "${admin_username}" "${admin_password}" |
+    kubectl --kubeconfig "${kubeconfig}" -n keycloak exec -i "${kc_pod}" -- sh -c '
+      set -eu
+      IFS= read -r admin_user
+      IFS= read -r admin_pw
+      config="$(mktemp /tmp/kcadm.XXXXXX)"
+      chmod 600 "$config"
+      trap "rm -f -- $config" EXIT
+      /opt/keycloak/bin/kcadm.sh config credentials --config "$config" --server http://localhost:8080 \
+        --realm master --user "$admin_user" --password "$admin_pw" >/dev/null 2>&1
+      /opt/keycloak/bin/kcadm.sh "$@" --config "$config"' kcadm "$@"
 }
 
 # -- organization -------------------------------------------------------------
@@ -78,10 +93,7 @@ if [ -z "${user_id}" ]; then
 
   kc create users -r "${realm}" -s username="${username}" -s email="${email}" \
     -s firstName="${first}" -s lastName="${last}" -s enabled=true -s emailVerified=true >/dev/null
-  kubectl --kubeconfig "${kubeconfig}" -n keycloak exec -i "${kc_pod}" -- env "NEW_PW=${password}" "U=${username}" "R=${realm}" sh -c '
-    /opt/keycloak/bin/kcadm.sh config credentials --config /tmp/kcadm.config --server http://localhost:8080 \
-      --realm master --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD" >/dev/null 2>&1 &&
-    /opt/keycloak/bin/kcadm.sh set-password --config /tmp/kcadm.config -r "$R" --username "$U" --new-password "$NEW_PW"'
+  kc set-password -r "${realm}" --username "${username}" --new-password "${password}"
   unset password
   user_id="$(kc get users -r "${realm}" -q username="${username}" -q exact=true --fields id --format csv --noquotes | head -1)"
   echo "Created user ${username}."
@@ -97,13 +109,6 @@ kc add-roles -r "${realm}" --uusername "${username}" --cclientid "${client_id}" 
 echo "${username} has role tenant-admin."
 
 # -- client secret ------------------------------------------------------------
-source "${repo_root}/scripts/lib/openbao-login.sh"
-openbao_login_admin
-
-bao() {
-  kubectl --kubeconfig "${kubeconfig}" -n "${namespace}" exec -i "${pod}" -- env "BAO_TOKEN=${BAO_TOKEN}" "$@"
-}
-
 if [ "${rotate}" = false ] && bao bao kv get -field=KEYCLOAK_CLIENT_SECRET "apps/flowloom-dev" >/dev/null 2>&1; then
   echo "Client secret already stored (use --rotate to replace it)."
   exit 0

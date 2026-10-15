@@ -296,6 +296,32 @@ resource "cloudflare_dns_record" "auth_prod" {
   proxied = true
 }
 
+# Protect the admin console and Admin REST API; realm/OIDC endpoints stay public.
+resource "cloudflare_zero_trust_access_application" "keycloak_admin" {
+  account_id                = var.cloudflare_account_id
+  name                      = "Homelab Keycloak admin"
+  domain                    = "auth.${var.cloudflare_prod_zone_name}/admin"
+  type                      = "self_hosted"
+  session_duration          = "24h"
+  auto_redirect_to_identity = false
+  allowed_idps              = [cloudflare_zero_trust_access_identity_provider.one_time_pin.id]
+  app_launcher_visible      = false
+
+  policies = [
+    {
+      name     = "Allow owner email"
+      decision = "allow"
+      include = [
+        {
+          email = {
+            email = var.access_allowed_email
+          }
+        }
+      ]
+    }
+  ]
+}
+
 resource "cloudflare_dns_record" "website_de_root" {
   zone_id = var.cloudflare_de_zone_id
   name    = var.cloudflare_de_zone_name

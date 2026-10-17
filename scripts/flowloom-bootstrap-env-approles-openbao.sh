@@ -32,10 +32,30 @@ namespace="openbao"
 pod="openbao-0"
 openbao_addr="https://openbao.miak-it.com"
 
+source "${repo_root}/scripts/lib/script-guide.sh"
+script_guide <<'GUIDE'
+Flowloom: per-environment OpenBao AppRoles
+------------------------------------------
+Usage:  bash scripts/flowloom-bootstrap-env-approles-openbao.sh [env ...]
+        (no arguments: asked below, default "dev staging prod")
+
+For each environment it creates (or refreshes) two AppRoles:
+  flowloom-worker-<env>  READ secret/flowloom/+/<env>/*   (that env's workers)
+  flowloom-admin-<env>   WRITE secret/flowloom/+/<env>/*  (that engine's Studio "Set Value", no read)
+and writes NEW secret_ids to ~/.flowloom-openbao-<env>-{worker,admin}-approle.env
+(chmod 600) + OpenBao apps/flowloom-<env>. Nothing is printed.
+
+Note: re-running issues NEW secret_ids. The old ones stay valid (they never
+expire), so update engines/workers to the new files and revoke old ones.
+It will ask for: the environments (if not given), then your OpenBao admin login.
+GUIDE
+
 if [ "$#" -gt 0 ]; then
   environments=("$@")
 else
-  environments=(dev staging prod)
+  env_list=""
+  ask_value env_list "Environments" "dev staging prod" '^[a-z0-9 -]+$'
+  read -r -a environments <<<"${env_list}"
 fi
 
 for env_slug in "${environments[@]}"; do
@@ -130,10 +150,11 @@ path \"secret/metadata/flowloom/+/${env_slug}/*\" {
     env "BAO_TOKEN=${BAO_TOKEN}" "KV_PATH=apps/flowloom-${env_slug}" "ADMIN_NAME=${admin}" \
       "W_ROLE=${worker_role_id}" "W_SECRET=${worker_secret_id}" \
       "A_ROLE=${admin_role_id}" "A_SECRET=${admin_secret_id}" \
-    sh -lc 'bao kv put "${KV_PATH}" \
-      OPENBAO_ROLE_ID="${W_ROLE}" OPENBAO_SECRET_ID="${W_SECRET}" \
+    sh -lc 'set -- OPENBAO_ROLE_ID="${W_ROLE}" OPENBAO_SECRET_ID="${W_SECRET}" \
       OPENBAO_ADMIN_ROLE_NAME="${ADMIN_NAME}" \
-      OPENBAO_ADMIN_ROLE_ID="${A_ROLE}" OPENBAO_ADMIN_SECRET_ID="${A_SECRET}"' >/dev/null
+      OPENBAO_ADMIN_ROLE_ID="${A_ROLE}" OPENBAO_ADMIN_SECRET_ID="${A_SECRET}"
+      # patch: the path also holds DATABASE_URL, SECRET_KEY_BASE, Keycloak secrets.
+      bao kv patch "${KV_PATH}" "$@" >/dev/null 2>&1 || bao kv put "${KV_PATH}" "$@"' >/dev/null
 
   unset worker_role_id worker_secret_id admin_role_id admin_secret_id
 

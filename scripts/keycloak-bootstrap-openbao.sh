@@ -6,7 +6,7 @@
 #     the database login. Existing values are kept, so re-running is safe.
 #   - creates the "keycloak" role and database in the shared Postgres
 #     (namespace database), or resets the role's password to the stored one.
-# No secret is printed. Usage: bash scripts/keycloak-bootstrap-openbao.sh
+# No secret is printed. Run it to see the guide: bash scripts/keycloak-bootstrap-openbao.sh
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -16,6 +16,23 @@ pod="openbao-0"
 kv_path="apps/keycloak"
 db_name="keycloak"
 db_user="keycloak"
+
+source "${repo_root}/scripts/lib/script-guide.sh"
+script_guide <<'GUIDE'
+Keycloak step 1: secrets + database (run before ArgoCD deploys Keycloak)
+------------------------------------------------------------------------
+Usage:  bash scripts/keycloak-bootstrap-openbao.sh   (no arguments)
+
+What it does (safe to re-run; existing secrets are kept):
+  1. Generates into OpenBao apps/keycloak: a temporary master-realm admin
+     (KC_BOOTSTRAP_ADMIN_*) and the database login (KC_DB_*). Never printed.
+  2. Creates role + database "keycloak" in the shared Postgres (namespace
+     database), or resets the role's password to the stored one.
+
+It will ask for: your OpenBao admin login.
+Afterwards: apply terraform/cloudflare, push the repo (ArgoCD deploys), then
+run scripts/keycloak-bootstrap-flowloom.sh. Full runbook: Flowloom docs/IAM.md.
+GUIDE
 
 source "${repo_root}/scripts/lib/openbao-login.sh"
 openbao_login_admin

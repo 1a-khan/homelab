@@ -9,28 +9,49 @@
 #     as KEYCLOAK_ISSUER / KEYCLOAK_CLIENT_ID / KEYCLOAK_CLIENT_SECRET, and into
 #     ~/.flowloom-keycloak.env (chmod 600) for the local dev engine.
 # Re-running is safe: existing org, user and membership are kept.
-#
-# Usage: bash scripts/keycloak-bootstrap-flowloom.sh <username> <email> [first] [last] [--rotate]
-#   e.g. bash scripts/keycloak-bootstrap-flowloom.sh ammad ammad.khan@miak-it.com Ammad Khan
+
+# Run it to see the guide: bash scripts/keycloak-bootstrap-flowloom.sh
 set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${repo_root}/scripts/lib/script-guide.sh"
 
 rotate=false
 args=()
 for a in "$@"; do
   if [ "$a" = "--rotate" ]; then rotate=true; else args+=("$a"); fi
 done
-if [ "${#args[@]}" -lt 2 ]; then
-  echo "usage: $0 <username> <email> [first] [last] [--rotate]" >&2
-  exit 1
-fi
-username="${args[0]}"
-email="${args[1]}"
+username="${args[0]:-}"
+email="${args[1]:-}"
 first="${args[2]:-}"
 last="${args[3]:-}"
-[[ "${username}" =~ ^[a-z0-9._-]+$ ]] || { echo "invalid username: ${username}" >&2; exit 1; }
-[[ "${email}" =~ ^[^@[:space:]]+@[^@[:space:]]+$ ]] || { echo "invalid email: ${email}" >&2; exit 1; }
 
-repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+script_guide <<'GUIDE'
+Keycloak: add a Flowloom user (realm "flowloom") + Studio client secret
+------------------------------------------------------------------------
+Usage:  bash scripts/keycloak-bootstrap-flowloom.sh [username] [email] [first] [last] [--rotate]
+        (anything left out is asked for below)
+
+What it does (safe to re-run; existing things are kept):
+  1. Organization "MIAK IT" (alias miak-it = Flowloom tenant): created if missing.
+  2. The user: created if missing (you type its password, hidden, twice),
+     added to miak-it, given the tenant-admin role.
+  3. Client secret of flowloom-studio: only generated if none is stored yet,
+     or with --rotate (the old one stops working at once; restart engines).
+     Stored in OpenBao apps/flowloom-{dev,staging,prod} + ~/.flowloom-keycloak.env
+
+It will ask for: missing arguments, your OpenBao admin login (it reads the
+Keycloak admin from apps/keycloak-admin), and the new user's password (new
+users only).
+GUIDE
+
+ask_value username "Username" "" '^[a-z0-9._-]+$'
+ask_value email "Email" "" '^[^@[:space:]]+@[^@[:space:]]+$'
+if [ "${#args[@]}" -lt 3 ] && [ -t 0 ]; then
+  printf 'First name (optional): '; IFS= read -r first
+  printf 'Last name (optional): '; IFS= read -r last
+fi
+
 kubeconfig="${repo_root}/kubeconfig"
 namespace="openbao"
 pod="openbao-0"

@@ -1,0 +1,21 @@
+# Flowloom engine + Studio, one install per environment (overlays/dev,
+# staging, prod). See the Flowloom repo's docs/DEPLOY.md.
+resources:
+  - deployment.yml
+  - service.yml
+  - ingress.yml
+  - ghcr-pull-secret.yml
+
+# The same in every environment. In-cluster addresses: no Cloudflare between
+# the engine and OpenBao / Keycloak's admin API.
+configMapGenerator:
+  - name: flowloom-common
+    literals:
+      - PORT=4000
+      - POOL_SIZE=8
+      - FLOWLOOM_DRAIN_SECONDS=30
+      - OPENBAO_ADDR=http://openbao.openbao.svc.cluster.local:8200
+      - OPENBAO_APPROLE_AUTH_PATH=approle
+      - KEYCLOAK_ISSUER=https://auth.miak-it.com/realms/flowloom
+      - KEYCLOAK_CLIENT_ID=flowloom-studio
+      - KEYCLOAK_ADMIN_URL=http://keycloak.keycloak.svc.cluster.local:8080

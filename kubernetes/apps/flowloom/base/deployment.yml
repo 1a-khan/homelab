@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flowloom
+  annotations:
+    secret.reloader.stakater.com/reload: "flowloom"
+spec:
+  replicas: 1
+  # Zero-downtime upgrades: the new pod must be ready before an old one
+  # drains (the engine hands its running paths over, docs/DECISIONS.md).
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: flowloom
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: flowloom
+    spec:
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: ghcr-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      # Drain (FLOWLOOM_DRAIN_SECONDS) plus margin.
+      terminationGracePeriodSeconds: 45
+      initContainers:
+        - name: migrate
+          image: ghcr.io/1a-khan/flowloom:latest
+          command: ["/app/bin/migrate"]
+          envFrom:
+            - configMapRef:
+                name: flowloom-common
+            - configMapRef:
+                name: flowloom-environment
+            - secretRef:
+                name: flowloom
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 192Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+      containers:
+        - name: flowloom
+          image: ghcr.io/1a-khan/flowloom:latest
+          ports:
+            - name: http
+              containerPort: 4000
+          envFrom:
+            - configMapRef:
+                name: flowloom-common
+            - configMapRef:
+                name: flowloom-environment
+            - secretRef:
+                name: flowloom
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 3
+            failureThreshold: 40
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 5
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "2"
+              memory: 1Gi

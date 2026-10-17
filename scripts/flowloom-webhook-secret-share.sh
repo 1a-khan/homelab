@@ -18,25 +18,41 @@
 # first, the customer's redeem fails: rotate the credential in that case.
 set -euo pipefail
 
-if [ "$#" -lt 3 ]; then
-  echo "usage: $0 <env> <process_id> <element_id> [ttl=24h] [tenant=miak-it]" >&2
-  exit 1
-fi
-
-env_slug="$1"
-process_id="$2"
-element_id="$3"
-ttl="${4:-24h}"
-tenant="${5:-miak-it}"
-
-for value in "${env_slug}" "${tenant}"; do
-  [[ "${value}" =~ ^[a-z0-9-]+$ ]] || { echo "invalid slug: ${value}" >&2; exit 1; }
-done
-[[ "${process_id}" =~ ^[0-9a-f-]{36}$ ]] || { echo "process_id must be the design's UUID" >&2; exit 1; }
-[[ "${element_id}" =~ ^[A-Za-z0-9_.-]+$ ]] || { echo "invalid element_id: ${element_id}" >&2; exit 1; }
-[[ "${ttl}" =~ ^[0-9]+[smh]$ ]] || { echo "ttl must look like 30m or 24h" >&2; exit 1; }
-
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${repo_root}/scripts/lib/script-guide.sh"
+
+env_slug="${1:-}"
+process_id="${2:-}"
+element_id="${3:-}"
+ttl="${4:-}"
+tenant="${5:-}"
+
+script_guide <<'GUIDE'
+Flowloom: share a webhook credential with a customer (single-use token)
+------------------------------------------------------------------------
+Usage:  bash scripts/flowloom-webhook-secret-share.sh [env] [process_id] [element_id] [ttl] [tenant]
+        (anything left out is asked for below)
+
+  env         dev | staging | prod: the engine whose webhook it is
+  process_id  the process design's UUID (Studio: webhook panel / Process info)
+  element_id  the webhook StartEvent's id, e.g. StartEvent_1
+  ttl         how long the share token stays valid, e.g. 30m or 24h (default 24h)
+  tenant      tenant slug (default miak-it)
+
+What it does: asks OpenBao for a response-WRAPPED copy of the credential and
+prints only that single-use token plus the curl command the customer runs to
+redeem it. The credential itself never appears here. If someone else redeems
+the token first, the customer's redeem fails: rotate the credential then.
+
+It will ask for: missing values, then your OpenBao admin login.
+GUIDE
+
+ask_value env_slug "Environment (dev/staging/prod)" "prod" '^[a-z0-9-]+$'
+ask_value process_id "Process id (UUID)" "" '^[0-9a-f-]{36}$'
+ask_value element_id "Webhook element id" "StartEvent_1" '^[A-Za-z0-9_.-]+$'
+ask_value ttl "Share token lifetime" "24h" '^[0-9]+[smh]$'
+ask_value tenant "Tenant" "miak-it" '^[a-z0-9-]+$'
+
 kubeconfig="${repo_root}/kubeconfig"
 namespace="openbao"
 pod="openbao-0"

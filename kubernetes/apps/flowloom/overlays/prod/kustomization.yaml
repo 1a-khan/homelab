@@ -1,0 +1,37 @@
+namespace: flowloom-prod
+
+resources:
+  - namespace.yml
+  - external-secret.yml
+  - ../../base
+
+configMapGenerator:
+  - name: flowloom-environment
+    literals:
+      - FLOWLOOM_ENVIRONMENT=prod
+      - PHX_HOST=flowloom.miak-it.com
+
+# The engine version this environment runs (a commit of 1a-khan/flowloom
+# that CI built and scanned). Upgrade: change it and push.
+images:
+  - name: ghcr.io/1a-khan/flowloom
+    newTag: af19f2afb8c853e189ec8abc794fe1297e6d55d8
+
+# One pod until the engines run as an Erlang cluster (DNS_CLUSTER_QUERY):
+# without it, live Studio updates only reach users on the same pod.
+# Rolling updates still surge a second pod, so deploys have no downtime.
+replicas:
+  - name: flowloom
+    count: 1
+
+patches:
+  - target:
+      kind: Ingress
+      name: flowloom
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: flowloom.miak-it.com
+      - op: replace
+        path: /metadata/annotations/traefik.ingress.kubernetes.io~1router.middlewares
+        value: flowloom-prod-forwarded-https@kubernetescrd

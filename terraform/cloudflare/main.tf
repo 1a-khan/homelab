@@ -82,6 +82,18 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "homelab" {
         service  = "http://traefik.kube-system.svc.cluster.local:80"
       },
       {
+        hostname = "dev-flowloom.${var.cloudflare_prod_zone_name}"
+        service  = "http://traefik.kube-system.svc.cluster.local:80"
+      },
+      {
+        hostname = "staging-flowloom.${var.cloudflare_prod_zone_name}"
+        service  = "http://traefik.kube-system.svc.cluster.local:80"
+      },
+      {
+        hostname = "flowloom.${var.cloudflare_prod_zone_name}"
+        service  = "http://traefik.kube-system.svc.cluster.local:80"
+      },
+      {
         hostname = var.cloudflare_de_zone_name
         service  = "http://traefik.kube-system.svc.cluster.local:80"
       },
@@ -347,4 +359,16 @@ output "tunnel_id" {
 output "tunnel_token" {
   value     = data.cloudflare_zero_trust_tunnel_cloudflared_token.homelab.token
   sensitive = true
+}
+
+# Flowloom engines (one per environment), kubernetes/apps/flowloom/overlays/*.
+resource "cloudflare_dns_record" "flowloom" {
+  for_each = toset(["dev-flowloom", "staging-flowloom", "flowloom"])
+
+  zone_id = var.cloudflare_prod_zone_id
+  name    = "${each.key}.${var.cloudflare_prod_zone_name}"
+  content = "${cloudflare_zero_trust_tunnel_cloudflared.homelab.id}.cfargotunnel.com"
+  type    = "CNAME"
+  ttl     = 1
+  proxied = true
 }

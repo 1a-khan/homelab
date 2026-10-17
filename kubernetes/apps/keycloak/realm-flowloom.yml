@@ -6,6 +6,13 @@
 # Organization memberships reach the ID token through Keycloak's built-in
 # "organization" client scope: Flowloom requests scope="openid ... organization"
 # and gets claim organization: ["<org alias>", ...] (alias = tenant slug).
+#
+# Admin rights and department roles come from groups (claim flowloom_groups):
+# /flowloom-platform-admins, /tenants/<tenant>/admins and
+# /tenants/<tenant>/departments/<dept>/<viewer|operator|developer>, managed
+# from Flowloom Studio through the flowloom-admin-api service account (users,
+# groups and organizations only). The client roles below are no longer used.
+# Existing realms: scripts/keycloak-flowloom-admin-setup.sh.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -82,8 +89,35 @@ data:
                 "userinfo.token.claim": "true",
                 "introspection.token.claim": "true"
               }
+            },
+            {
+              "name": "flowloom groups",
+              "protocol": "openid-connect",
+              "protocolMapper": "oidc-group-membership-mapper",
+              "consentRequired": false,
+              "config": {
+                "claim.name": "flowloom_groups",
+                "full.path": "true",
+                "id.token.claim": "true",
+                "access.token.claim": "true",
+                "userinfo.token.claim": "true",
+                "introspection.token.claim": "true"
+              }
             }
           ]
+        },
+        {
+          "clientId": "flowloom-admin-api",
+          "name": "Flowloom admin API",
+          "description": "Flowloom admin screens: users, groups, organizations only",
+          "enabled": true,
+          "protocol": "openid-connect",
+          "publicClient": false,
+          "clientAuthenticatorType": "client-secret",
+          "serviceAccountsEnabled": true,
+          "standardFlowEnabled": false,
+          "implicitFlowEnabled": false,
+          "directAccessGrantsEnabled": false
         }
       ],
       "roles": {
@@ -132,5 +166,31 @@ data:
             }
           ]
         }
-      }
+      },
+      "groups": [
+        {
+          "name": "flowloom-platform-admins"
+        },
+        {
+          "name": "tenants"
+        }
+      ],
+      "users": [
+        {
+          "username": "service-account-flowloom-admin-api",
+          "enabled": true,
+          "serviceAccountClientId": "flowloom-admin-api",
+          "clientRoles": {
+            "realm-management": [
+              "manage-users",
+              "view-users",
+              "query-users",
+              "query-groups",
+              "manage-organizations",
+              "view-organizations",
+              "query-organizations"
+            ]
+          }
+        }
+      ]
     }

@@ -21,7 +21,8 @@ Usage:  bash scripts/flowloom-k3s-bootstrap-openbao.sh [env ...] [--rotate-ghcr]
 
 For each environment (OpenBao apps/flowloom-<env>, written with kv patch so the
 AppRole and Keycloak values already there stay):
-  1. Postgres role + database flowloom_<env> on the shared Postgres, and
+  1. Postgres role + database flowloom_<env> on the shared Postgres (only
+     that role may connect to it), and
      DATABASE_URL (+ FLOWLOOM_DB_PASSWORD) pointing at it.
   2. SECRET_KEY_BASE: generated once and then kept. It must never change for
      an environment: webhook URLs and stored webhook secrets derive from it.
@@ -84,6 +85,8 @@ WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'"'"'app_user'"'"') \gex
 SELECT format('"'"'ALTER ROLE %I WITH LOGIN PASSWORD %L'"'"', :'"'"'app_user'"'"', :'"'"'app_password'"'"') \gexec
 SELECT format('"'"'CREATE DATABASE %I OWNER %I'"'"', :'"'"'app_db'"'"', :'"'"'app_user'"'"')
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = :'"'"'app_db'"'"') \gexec
+SELECT format('"'"'REVOKE CONNECT ON DATABASE %I FROM PUBLIC'"'"', :'"'"'app_db'"'"') \gexec
+SELECT format('"'"'GRANT CONNECT ON DATABASE %I TO %I'"'"', :'"'"'app_db'"'"', :'"'"'app_user'"'"') \gexec
 SQL
 '
   url="ecto://${db}:${db_password}@postgres.database.svc.cluster.local:5432/${db}"

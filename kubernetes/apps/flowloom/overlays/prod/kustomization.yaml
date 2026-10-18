@@ -15,7 +15,7 @@ configMapGenerator:
 # that CI built and scanned). Upgrade: change it and push.
 images:
   - name: ghcr.io/1a-khan/flowloom
-    newTag: f8e9a72d816efb0b2e07be666d13b643262830b6
+    newTag: d061b76b4edb113d840373c9837c1530f008f823
 
 # One pod until the engines run as an Erlang cluster (DNS_CLUSTER_QUERY):
 # without it, live Studio updates only reach users on the same pod.

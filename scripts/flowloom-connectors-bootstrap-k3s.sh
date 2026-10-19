@@ -32,11 +32,14 @@ It asks for your OpenBao admin login.
 GUIDE
 
 kubeconfig="${repo_root}/kubeconfig"
+# Used by scripts/lib/openbao-login.sh as well.
+namespace="openbao"
+pod="openbao-0"
 k() { kubectl --kubeconfig "${kubeconfig}" "$@"; }
 
 source "${repo_root}/scripts/lib/openbao-login.sh"
 openbao_login_admin
-bao() { k -n openbao exec -i openbao-0 -- env "BAO_TOKEN=${BAO_TOKEN}" "$@"; }
+bao() { k -n "${namespace}" exec -i "${pod}" -- env "BAO_TOKEN=${BAO_TOKEN}" "$@"; }
 
 for env_slug in "${envs[@]}"; do
   [[ "${env_slug}" =~ ^[a-z0-9]+$ ]] || { echo "invalid environment: ${env_slug}" >&2; exit 1; }
@@ -54,11 +57,11 @@ for env_slug in "${envs[@]}"; do
     api_key="$(bao bao kv get -field=FLOWLOOM_API_KEY "${path}" 2>/dev/null || true)"
   fi
   if [ -z "${api_key}" ]; then
-    pod="$(k -n "flowloom-${env_slug}" get pods -l app.kubernetes.io/name=flowloom \
+    engine_pod="$(k -n "flowloom-${env_slug}" get pods -l app.kubernetes.io/name=flowloom \
       --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}')"
-    k -n "flowloom-${env_slug}" exec "${pod}" -c flowloom -- \
+    k -n "flowloom-${env_slug}" exec "${engine_pod}" -c flowloom -- \
       /app/bin/flowloom eval 'Flowloom.Release.create_platform_key("flowloom-connectors", "/tmp")' | tail -1
-    api_key="$(k -n "flowloom-${env_slug}" exec "${pod}" -c flowloom -- sh -c \
+    api_key="$(k -n "flowloom-${env_slug}" exec "${engine_pod}" -c flowloom -- sh -c \
       'f=/tmp/.flowloom-platform-worker-flowloom-connectors.env; sed -n "s/^FLOWLOOM_API_KEY=//p" "$f"; rm -f "$f"')"
     [ -n "${api_key}" ] || { echo "[${env_slug}] could not create the platform key" >&2; exit 1; }
     echo "[${env_slug}] new platform worker key created."

@@ -1,0 +1,13 @@
+# Flowloom connector worker (repo 1a-khan/flowloom-connectors): the platform
+# worker for Outlook, OneDrive, Telegram and AI, one install per engine
+# environment (overlays/<env>). It only makes outgoing calls: no Service, no
+# Ingress. Secrets: its own OpenBao AppRole + its platform worker key.
+resources:
+  - deployment.yml
+  - ghcr-pull-secret.yml
+
+configMapGenerator:
+  - name: connectors-common
+    literals:
+      - OPENBAO_ADDR=http://openbao.openbao.svc.cluster.local:8200
+      - OPENBAO_APPROLE_AUTH_PATH=approle

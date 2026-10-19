@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flowloom-connectors
+  labels:
+    app.kubernetes.io/name: flowloom-connectors
+spec:
+  replicas: 1
+  # Polls and jobs are locked per worker, so a rolling update can briefly run
+  # old and new side by side; the old one drains (finishes its work) on SIGTERM.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: flowloom-connectors
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: flowloom-connectors
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      # The SDK waits up to 60 s for in-flight jobs and polls on shutdown.
+      terminationGracePeriodSeconds: 75
+      containers:
+        - name: connectors
+          image: ghcr.io/1a-khan/flowloom-connectors:IMAGE_TAG
+          envFrom:
+            - configMapRef:
+                name: connectors-common
+            - configMapRef:
+                name: connectors-environment
+            - secretRef:
+                name: flowloom-connectors
+          env:
+            # Unique per pod, so two pods during a rollout never share locks.
+            - name: FLOWLOOM_WORKER_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 20m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 384Mi
+          livenessProbe:
+            exec:
+              command: ["/app/bin/flowloom_connectors", "pid"]
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10

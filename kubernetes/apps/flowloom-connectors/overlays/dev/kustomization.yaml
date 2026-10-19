@@ -1,0 +1,19 @@
+namespace: flowloom-connectors-dev
+
+resources:
+  - namespace.yml
+  - external-secret.yml
+  - ../../base
+
+# The dev engine it serves. Its public URL, like any worker: inside the
+# cluster the engine redirects plain-HTTP API calls to HTTPS.
+configMapGenerator:
+  - name: connectors-environment
+    literals:
+      - FLOWLOOM_URL=https://dev-flowloom.miak-it.com
+
+# The connector version (a commit of 1a-khan/flowloom-connectors that CI
+# built and scanned). Upgrade: change it and push.
+images:
+  - name: ghcr.io/1a-khan/flowloom-connectors
+    newTag: d2866f333edd0e1ab3f188f6c36cdc1287eb9f7f

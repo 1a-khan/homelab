@@ -35,7 +35,7 @@ spec:
         fsGroup: 1000
       containers:
         - name: n8n
-          image: n8nio/n8n:2.30.8
+          image: n8nio/n8n:2.44.5
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 5678
@@ -175,7 +175,7 @@ spec:
         fsGroup: 1000
       containers:
         - name: n8n-worker
-          image: n8nio/n8n:2.30.8
+          image: n8nio/n8n:2.44.5
           imagePullPolicy: IfNotPresent
           command:
             - n8n
@@ -282,7 +282,7 @@ spec:
       enableServiceLinks: false
       containers:
         - name: task-runners
-          image: n8nio/runners:2.30.8
+          image: n8nio/runners:2.44.5
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 5680

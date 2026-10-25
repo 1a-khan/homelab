@@ -3,6 +3,7 @@ namespace: flowloom-dev
 resources:
   - namespace.yml
   - external-secret.yml
+  - files-volume.yml
   - ../../base
 
 configMapGenerator:
@@ -10,12 +11,13 @@ configMapGenerator:
     literals:
       - FLOWLOOM_ENVIRONMENT=dev
       - PHX_HOST=dev-flowloom.miak-it.com
+      - FLOWLOOM_FILES_DIR=/data/files
 
 # The engine version this environment runs (a commit of 1a-khan/flowloom
 # that CI built and scanned). Upgrade: change it and push.
 images:
   - name: ghcr.io/1a-khan/flowloom
-    newTag: 174e4f68c38dcbef57a0db34568cf1c36436d535
+    newTag: 9d4d822fecbf707de8f9493231a41c8deedcfe7a
 
 replicas:
   - name: flowloom
@@ -32,3 +34,19 @@ patches:
       - op: replace
         path: /metadata/annotations/traefik.ingress.kubernetes.io~1router.middlewares
         value: flowloom-dev-forwarded-https@kubernetescrd
+  # Form uploads on a volume (files-volume.yml), so they outlive a restart.
+  - target:
+      kind: Deployment
+      name: flowloom
+    patch: |-
+      - op: add
+        path: /spec/template/spec/volumes
+        value:
+          - name: files
+            persistentVolumeClaim:
+              claimName: flowloom-files
+      - op: add
+        path: /spec/template/spec/containers/0/volumeMounts
+        value:
+          - name: files
+            mountPath: /data/files

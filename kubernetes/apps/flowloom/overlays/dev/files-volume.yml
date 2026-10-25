@@ -1,0 +1,13 @@
+# Photos and files from Flowloom forms (Flowloom.Files, FLOWLOOM_FILES_DIR).
+# Dev only: test data, not in a backup. Staging/prod get S3 (SeaweedFS).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: flowloom-files
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi

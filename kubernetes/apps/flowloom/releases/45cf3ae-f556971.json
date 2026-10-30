@@ -1,0 +1,40 @@
+{
+  "release_version": 1,
+  "engine": "45cf3ae461e157322a94789a22e742c898424256",
+  "connectors": "f556971155829d78e0be65dc9fa8cfdfea2c3d2f",
+  "protocol": 1,
+  "actions": [
+    {
+      "version": "2",
+      "topic": "ai.chat"
+    },
+    {
+      "version": "1",
+      "topic": "email.send"
+    },
+    {
+      "version": "1",
+      "topic": "http.request"
+    },
+    {
+      "version": null,
+      "topic": "telegram.answer_callback"
+    },
+    {
+      "version": null,
+      "topic": "telegram.edit_message"
+    },
+    {
+      "version": "1",
+      "topic": "telegram.send_message"
+    },
+    {
+      "version": null,
+      "topic": "telegram.set_webhook"
+    }
+  ],
+  "tested": {
+    "run": "https://github.com/1a-khan/flowloom-connectors/actions/runs/41110882857",
+    "at": "2026-10-30T18:57:01Z"
+  }
+}

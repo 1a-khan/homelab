@@ -16,4 +16,4 @@ configMapGenerator:
 # built and scanned). Upgrade: change it and push.
 images:
   - name: ghcr.io/1a-khan/flowloom-connectors
-    newTag: 9ce8e3614559a5034c5716f4e3951072053089c9
+    newTag: 8db70532e017e242485ea5187363abc3e10560e7

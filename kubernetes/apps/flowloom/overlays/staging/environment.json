@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": 3,
+  "revision": 4,
   "platform_keys": [
     {
       "name": "flowloom-connectors",
@@ -41,7 +41,17 @@
       "telegram": {
         "connection": "telegram-approvals",
         "bot_username": "MiakApprovalsStagingBot"
-      }
+      },
+      "api_keys": [
+        {
+          "name": "flowloom-processes-deploy",
+          "scopes": [
+            "deploy"
+          ],
+          "key_sha256": "73a0e6cbe3ea7eb154420d5fdeff1f2e6ca06e40ff5c06a169070dc0a3d415c4",
+          "key_hint": "y4pY"
+        }
+      ]
     }
   ]
 }

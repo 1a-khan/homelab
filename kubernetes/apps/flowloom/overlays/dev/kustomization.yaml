@@ -17,7 +17,7 @@ configMapGenerator:
 # that CI built and scanned). Upgrade: change it and push.
 images:
   - name: ghcr.io/1a-khan/flowloom
-    newTag: 1a3ad6e0481d8c6ab4ce969452382948b66d43f8
+    newTag: f22841af67285ae63a4b0799eeee1beff60dfbb2
 
 replicas:
   - name: flowloom

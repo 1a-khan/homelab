@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "revision": 2,
+  "platform_keys": [
+    {
+      "name": "flowloom-connectors",
+      "key_sha256": "8016c08fd1ad8aef4e80f27f412599c53364663c0c7ec6f8b72a02388fb71d23",
+      "key_hint": "-t2w"
+    }
+  ],
+  "tenants": [
+    {
+      "slug": "miak-it",
+      "name": "MIAK IT",
+      "connections": [
+        {
+          "name": "microsoft-mail",
+          "kind": "custom",
+          "sharing": "tenant",
+          "description": "Outlook triggers and mail (OpenBao issues and rotates the app secret)"
+        },
+        {
+          "name": "microsoft-files",
+          "kind": "custom",
+          "sharing": "tenant",
+          "description": "OneDrive triggers and files (OpenBao issues and rotates the app secret)"
+        }
+      ]
+    }
+  ]
+}

@@ -229,3 +229,47 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: flowloom-connectors-staging
+  namespace: argocd
+spec:
+  project: homelab
+  source:
+    repoURL: git@github.com:1a-khan/homelab.git
+    targetRevision: main
+    path: kubernetes/apps/flowloom-connectors/overlays/staging
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: flowloom-connectors-staging
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: flowloom-connectors-prod
+  namespace: argocd
+spec:
+  project: homelab
+  source:
+    repoURL: git@github.com:1a-khan/homelab.git
+    targetRevision: main
+    path: kubernetes/apps/flowloom-connectors/overlays/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: flowloom-connectors-prod
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

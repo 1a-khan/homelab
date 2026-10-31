@@ -10,6 +10,14 @@ configMapGenerator:
     literals:
       - FLOWLOOM_ENVIRONMENT=staging
       - PHX_HOST=staging-flowloom.miak-it.com
+      - FLOWLOOM_CONFIG_FILE=/etc/flowloom/environment.json
+  # What this engine has (tenants, connections, keys), declared instead of set
+  # up in Studio (flowloom docs/ENVIRONMENT_CONFIG.md). No secrets: values are
+  # in OpenBao, keys only as sha256. Raise "revision" with every change.
+  # The platform key is written by scripts/flowloom-connectors-bootstrap-k3s.sh.
+  - name: flowloom-config
+    files:
+      - environment.json
 
 # The engine version this environment runs (a commit of 1a-khan/flowloom
 # that CI built and scanned). Upgrade: change it and push.
@@ -32,3 +40,25 @@ patches:
       - op: replace
         path: /metadata/annotations/traefik.ingress.kubernetes.io~1router.middlewares
         value: flowloom-staging-forwarded-https@kubernetescrd
+  # The environment config file, mounted as a folder (not subPath).
+  - target:
+      kind: Deployment
+      name: flowloom
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: flowloom
+      spec:
+        template:
+          spec:
+            volumes:
+              - name: config
+                configMap:
+                  name: flowloom-config
+            containers:
+              - name: flowloom
+                volumeMounts:
+                  - name: config
+                    mountPath: /etc/flowloom
+                    readOnly: true

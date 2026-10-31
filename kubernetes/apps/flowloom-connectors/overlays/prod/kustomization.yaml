@@ -1,0 +1,18 @@
+namespace: flowloom-connectors-prod
+
+resources:
+  - namespace.yml
+  - external-secret.yml
+  - ../../base
+
+configMapGenerator:
+  - name: connectors-environment
+    literals:
+      - FLOWLOOM_URL=https://flowloom.miak-it.com
+
+# The connectors version this environment runs. Not edited by hand: the
+# flowloom repo's "Promote a release" workflow pins it together with the
+# engine (the pair that passed the contract test on dev).
+images:
+  - name: ghcr.io/1a-khan/flowloom-connectors
+    newTag: 6464eb82b68ab6f922907bd3c88422e4a91b3bfa

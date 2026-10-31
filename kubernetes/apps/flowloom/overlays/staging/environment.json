@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": 2,
+  "revision": 3,
   "platform_keys": [
     {
       "name": "flowloom-connectors",
@@ -24,8 +24,24 @@
           "kind": "custom",
           "sharing": "tenant",
           "description": "OneDrive triggers and files (OpenBao issues and rotates the app secret)"
+        },
+        {
+          "name": "openrouter",
+          "kind": "api_key",
+          "sharing": "tenant",
+          "description": "OpenRouter for the AI: chat step"
+        },
+        {
+          "name": "telegram-approvals",
+          "kind": "custom",
+          "sharing": "tenant",
+          "description": "Token of the Telegram approvals bot (bot_token)"
         }
-      ]
+      ],
+      "telegram": {
+        "connection": "telegram-approvals",
+        "bot_username": "MiakApprovalsStagingBot"
+      }
     }
   ]
 }

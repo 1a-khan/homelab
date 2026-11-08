@@ -1,0 +1,52 @@
+{
+  "release_version": 1,
+  "engine": "5e8ee65052a2924bec2cae3387d8a0eea192aa1b",
+  "connectors": "25bc83067eb5e4442fce2f45be4d641af21e54e5",
+  "protocol": 1,
+  "actions": [
+    {
+      "version": "2",
+      "topic": "ai.chat"
+    },
+    {
+      "version": "2",
+      "topic": "email.send"
+    },
+    {
+      "version": "1",
+      "topic": "http.request"
+    },
+    {
+      "version": "1",
+      "topic": "telegram.answer_callback"
+    },
+    {
+      "version": "1",
+      "topic": "telegram.edit_message"
+    },
+    {
+      "version": "1",
+      "topic": "telegram.send_message"
+    },
+    {
+      "version": "1",
+      "topic": "telegram.set_webhook"
+    },
+    {
+      "version": "1",
+      "topic": "trigger:microsoft.onedrive.file_changed"
+    },
+    {
+      "version": "1",
+      "topic": "trigger:microsoft.outlook.new_mail"
+    },
+    {
+      "version": "1",
+      "topic": "trigger:telegram.new_message"
+    }
+  ],
+  "tested": {
+    "run": "https://github.com/1a-khan/flowloom/actions/runs/42431865418",
+    "at": "2026-11-08T01:00:04Z"
+  }
+}

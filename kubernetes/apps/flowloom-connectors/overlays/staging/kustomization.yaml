@@ -15,4 +15,4 @@ configMapGenerator:
 # engine (the pair that passed the contract test on dev).
 images:
   - name: ghcr.io/1a-khan/flowloom-connectors
-    newTag: 6464eb82b68ab6f922907bd3c88422e4a91b3bfa
+    newTag: 25bc83067eb5e4442fce2f45be4d641af21e54e5

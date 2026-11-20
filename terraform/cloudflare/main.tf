@@ -106,7 +106,7 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "homelab" {
         service  = "http://traefik.kube-system.svc.cluster.local:80"
       },
       {
-        hostname = "${var.profile_hostname}.${var.cloudflare_cokha_zone_name}"
+        hostname = "${var.profile_hostname}.${var.cloudflare_zone_name}"
         service  = "http://traefik.kube-system.svc.cluster.local:80"
       },
       {
@@ -369,16 +369,10 @@ resource "cloudflare_dns_record" "profil_de" {
   proxied = true
 }
 
-# Personal application profile (code-protected), e.g. ammad.cokha.com.
-data "cloudflare_zone" "cokha" {
-  filter = {
-    name = var.cloudflare_cokha_zone_name
-  }
-}
-
-resource "cloudflare_dns_record" "profile_cokha" {
-  zone_id = data.cloudflare_zone.cokha.zone_id
-  name    = "${var.profile_hostname}.${var.cloudflare_cokha_zone_name}"
+# Personal application profile (code-protected): ammad.miak-it.dev.
+resource "cloudflare_dns_record" "profile" {
+  zone_id = var.cloudflare_zone_id
+  name    = "${var.profile_hostname}.${var.cloudflare_zone_name}"
   content = "${cloudflare_zero_trust_tunnel_cloudflared.homelab.id}.cfargotunnel.com"
   type    = "CNAME"
   ttl     = 1
@@ -386,8 +380,9 @@ resource "cloudflare_dns_record" "profile_cokha" {
 }
 
 # City/region headers (cf-ipcity, cf-region) for the profile's visit notifications.
-resource "cloudflare_managed_transforms" "cokha" {
-  zone_id = data.cloudflare_zone.cokha.zone_id
+# Needs "Zone > Transform Rules > Edit" on the API token.
+resource "cloudflare_managed_transforms" "miak_it_dev" {
+  zone_id = var.cloudflare_zone_id
   managed_request_headers = [
     {
       id      = "add_visitor_location_headers"

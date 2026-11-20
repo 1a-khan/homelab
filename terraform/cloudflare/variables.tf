@@ -53,3 +53,15 @@ variable "access_allowed_email" {
   type        = string
   description = "Email address allowed through Cloudflare Access for the test app."
 }
+
+variable "cloudflare_cokha_zone_name" {
+  type        = string
+  description = "Domain for the personal application profile."
+  default     = "cokha.com"
+}
+
+variable "profile_hostname" {
+  type        = string
+  description = "Subdomain of the application profile, for example 'ammad' for ammad.cokha.com."
+  default     = "ammad"
+}

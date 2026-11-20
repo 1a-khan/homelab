@@ -1,0 +1,40 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: forwarded-https
+  namespace: miak-profil
+spec:
+  headers:
+    customRequestHeaders:
+      X-Forwarded-Proto: https
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: miak-profil
+  namespace: miak-profil
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: miak-profil-forwarded-https@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: ammad.cokha.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: miak-profil
+                port:
+                  number: 8000
+    - host: profil.miak-it.de
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: miak-profil
+                port:
+                  number: 8000

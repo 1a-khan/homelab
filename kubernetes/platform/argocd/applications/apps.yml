@@ -273,3 +273,27 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: miak-profil
+  namespace: argocd
+spec:
+  project: homelab
+  source:
+    repoURL: git@github.com:1a-khan/homelab.git
+    targetRevision: main
+    path: kubernetes/apps/miak-profil
+    directory:
+      include: '{namespace.yml,external-secret.yml,ghcr-pull-secret.yml,miak-profil.yml,ingress.yml}'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: miak-profil
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

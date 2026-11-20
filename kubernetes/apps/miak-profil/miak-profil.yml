@@ -39,7 +39,7 @@ spec:
         - name: ghcr-pull
       containers:
         - name: miak-profil
-          image: ghcr.io/1a-khan/miak-profil:4a88478f6850c8ac3ecf9ed05cfd367cc991edd9
+          image: ghcr.io/1a-khan/miak-profil:edd360b5b7fbb9c5497ac0dcdadebb68c4ac4c89
           imagePullPolicy: IfNotPresent
           command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
           ports:

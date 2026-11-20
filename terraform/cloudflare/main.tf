@@ -379,18 +379,9 @@ resource "cloudflare_dns_record" "profile" {
   proxied = true
 }
 
-# City/region headers (cf-ipcity, cf-region) for the profile's visit notifications.
-# Needs "Zone > Transform Rules > Edit" on the API token.
-resource "cloudflare_managed_transforms" "miak_it_dev" {
-  zone_id = var.cloudflare_zone_id
-  managed_request_headers = [
-    {
-      id      = "add_visitor_location_headers"
-      enabled = true
-    }
-  ]
-  managed_response_headers = []
-}
+# City/region headers for the profile's visit notifications are switched on in the
+# dashboard (Rules > Settings > Managed Transforms > "Add visitor location headers"):
+# the IaC token has no Transform Rules permission.
 
 output "tunnel_id" {
   value = cloudflare_zero_trust_tunnel_cloudflared.homelab.id

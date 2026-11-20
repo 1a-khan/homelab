@@ -102,6 +102,14 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "homelab" {
         service  = "http://traefik.kube-system.svc.cluster.local:80"
       },
       {
+        hostname = "profil.${var.cloudflare_de_zone_name}"
+        service  = "http://traefik.kube-system.svc.cluster.local:80"
+      },
+      {
+        hostname = "${var.profile_hostname}.${var.cloudflare_cokha_zone_name}"
+        service  = "http://traefik.kube-system.svc.cluster.local:80"
+      },
+      {
         service = "http_status:404"
       }
     ]
@@ -346,6 +354,31 @@ resource "cloudflare_dns_record" "website_de_root" {
 resource "cloudflare_dns_record" "website_de_www" {
   zone_id = var.cloudflare_de_zone_id
   name    = "www.${var.cloudflare_de_zone_name}"
+  content = "${cloudflare_zero_trust_tunnel_cloudflared.homelab.id}.cfargotunnel.com"
+  type    = "CNAME"
+  ttl     = 1
+  proxied = true
+}
+
+resource "cloudflare_dns_record" "profil_de" {
+  zone_id = var.cloudflare_de_zone_id
+  name    = "profil.${var.cloudflare_de_zone_name}"
+  content = "${cloudflare_zero_trust_tunnel_cloudflared.homelab.id}.cfargotunnel.com"
+  type    = "CNAME"
+  ttl     = 1
+  proxied = true
+}
+
+# Personal application profile (code-protected), e.g. ammad.cokha.com.
+data "cloudflare_zone" "cokha" {
+  filter = {
+    name = var.cloudflare_cokha_zone_name
+  }
+}
+
+resource "cloudflare_dns_record" "profile_cokha" {
+  zone_id = data.cloudflare_zone.cokha.zone_id
+  name    = "${var.profile_hostname}.${var.cloudflare_cokha_zone_name}"
   content = "${cloudflare_zero_trust_tunnel_cloudflared.homelab.id}.cfargotunnel.com"
   type    = "CNAME"
   ttl     = 1

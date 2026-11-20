@@ -1,0 +1,90 @@
+# Code-protected profile: ammad.cokha.com (job applications) and profil.miak-it.de (freelance letters).
+# Access codes, certificates and the access log live on the PVC, never in the image:
+#   kubectl cp private/zugang.json miak-profil/<pod>:/data/private/zugang.json
+# Secret: scripts/miak-profil-bootstrap-openbao.sh (once). Image: built by GitHub Actions in 1a-khan/cv.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: miak-profil-private
+  namespace: miak-profil
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: miak-profil
+  namespace: miak-profil
+  annotations:
+    secret.reloader.stakater.com/reload: "miak-profil"
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: miak-profil
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: miak-profil
+    spec:
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: ghcr-pull
+      containers:
+        - name: miak-profil
+          image: ghcr.io/1a-khan/miak-profil:fd23bb5fdc84cf9bd31a5d34327878f33c5b5a17
+          imagePullPolicy: IfNotPresent
+          command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - secretRef:
+                name: miak-profil
+          env:
+            - name: PROFILE_MODE
+              value: public
+            - name: PROFILE_PRIVATE_DIR
+              value: /data/private
+          volumeMounts:
+            - name: private
+              mountPath: /data/private
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 20m
+              memory: 96Mi
+            limits:
+              memory: 256Mi
+      volumes:
+        - name: private
+          persistentVolumeClaim:
+            claimName: miak-profil-private
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: miak-profil
+  namespace: miak-profil
+spec:
+  selector:
+    app.kubernetes.io/name: miak-profil
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http

@@ -385,6 +385,18 @@ resource "cloudflare_dns_record" "profile_cokha" {
   proxied = true
 }
 
+# City/region headers (cf-ipcity, cf-region) for the profile's visit notifications.
+resource "cloudflare_managed_transforms" "cokha" {
+  zone_id = data.cloudflare_zone.cokha.zone_id
+  managed_request_headers = [
+    {
+      id      = "add_visitor_location_headers"
+      enabled = true
+    }
+  ]
+  managed_response_headers = []
+}
+
 output "tunnel_id" {
   value = cloudflare_zero_trust_tunnel_cloudflared.homelab.id
 }

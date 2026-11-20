@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Stores the secrets of the application profile (ammad.cokha.com) in OpenBao:
+# Stores the secrets of the application profile (ammad.miak-it.dev) in OpenBao:
 #   PROFILE_SECRET       cookie signing key (generated; rotating it logs every visitor out)
 #   PROFILE_WEBHOOK_URL  n8n webhook that sends a Telegram message on every visit
 # Usage: scripts/miak-profil-bootstrap-openbao.sh <n8n-webhook-url>

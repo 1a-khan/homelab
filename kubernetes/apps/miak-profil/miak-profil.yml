@@ -1,4 +1,4 @@
-# Code-protected profile: ammad.cokha.com (job applications) and profil.miak-it.de (freelance letters).
+# Code-protected profile: ammad.miak-it.dev (job applications) and profil.miak-it.de (freelance letters).
 # Access codes, certificates and the access log live on the PVC, never in the image:
 #   kubectl cp private/zugang.json miak-profil/<pod>:/data/private/zugang.json
 # Secret: scripts/miak-profil-bootstrap-openbao.sh (once). Image: built by GitHub Actions in 1a-khan/cv.
